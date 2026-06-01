@@ -1,0 +1,21 @@
+{
+  "name": "jira-project-assistant",
+  "version": "0.1.0",
+  "description": "Atlassian Forge app for managing a Jira project: surfaces problematic issues and auto-fixes some of them.",
+  "private": true,
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "atlassian",
+    "forge",
+    "jira",
+    "react",
+    "mui"
+  ],
+  "author": "Рашид Шафеев <rashidshafeev@gmail.com>",
+  "license": "UNLICENSED"
+}
