@@ -1,0 +1,50 @@
+modules:
+  jira:projectPage:
+    - key: project-assistant
+      resource: main
+      resolver:
+        function: resolver
+      title: Project Assistant
+      # `blank` = "a completely empty canvas for full viewport customization":
+      # no Jira system header/title, breadcrumbs, AND no project-page left margin
+      # (the deprecated `basic` layout we used before added a ~40px left gutter +
+      # breadcrumbs). We render our own chrome, so we want the bare canvas.
+      # `projectPage` has no `viewportSize` — height is auto-resize (grows to fit).
+      layout: blank
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  - key: main
+    path: frontend/dist
+    # Dev-only: with this set, `forge tunnel` proxies the Custom UI iframe to a
+    # local Vite dev server on this port instead of serving the static `path`, so
+    # frontend edits go live without a rebuild (see README "Live frontend dev").
+    # The tunnel reads the DEPLOYED manifest, so this must be `forge deploy`d once
+    # to take effect — `forge lint` alone won't. Prod still serves the built `path`.
+    # Requires `npm --prefix frontend run dev` up on 5173 (+ Chrome LNA allowed).
+    tunnel:
+      port: 5173
+
+permissions:
+  scopes:
+    # read issues, projects, statuses, priorities
+    - read:jira-work
+    # update issue assignee and priority (the "fix" actions)
+    - write:jira-work
+    # list project members / assignable users
+    - read:jira-user
+    # persist per-user UI table preferences (sort/filter/column layout) in
+    # Forge app storage, keyed by the caller's accountId (see src/prefs.ts)
+    - storage:app
+  content:
+    # MUI/Emotion inject CSS as inline <style> tags at runtime; the default
+    # Custom UI CSP blocks inline styles, leaving the page unstyled. Allow them.
+    styles:
+      - unsafe-inline
+
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/a07afedf-b6a9-4d47-9901-71abc27811e3
