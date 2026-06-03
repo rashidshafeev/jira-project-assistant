@@ -8,7 +8,7 @@
  * providers/theme/i18n shell stays unconditional.
  */
 export type EntryContext =
-  | { mode: 'page' }
+  | { mode: 'page'; projectKey?: string }
   | { mode: 'panel'; issueKey: string; projectKey: string }
 
 /**
@@ -29,7 +29,10 @@ export function resolveForgeEntry(context: ForgeContextish): EntryContext {
   const issueKey = context.extension?.issue?.key
   const projectKey = context.extension?.project?.key
   if (issueKey && projectKey) return { mode: 'panel', issueKey, projectKey }
-  return { mode: 'page' }
+  // projectPage: carry the host project so the picker can default to the project the
+  // app was opened from (see forge-bootstrap), not just the first one in the list.
+  // Omit when absent rather than set undefined (exactOptionalPropertyTypes).
+  return projectKey ? { mode: 'page', projectKey } : { mode: 'page' }
 }
 
 /**
