@@ -1,11 +1,16 @@
 /**
- * Which view the bundle renders. The SAME `frontend/dist` is served for two Forge
- * modules — the `jira:projectPage` (the full assistant shell) and the
- * `jira:issuePanel` (a single-issue panel) — so we branch on the Forge context at
- * bootstrap instead of shipping a second HTML entry (Forge resources serve
- * `index.html` from a directory, and `base: './'` + a nested multi-page build
- * breaks the iframe asset paths). The branch happens before `App` renders, so the
- * providers/theme/i18n shell stays unconditional.
+ * Which view the bundle renders. The SAME `frontend/dist` is served for every Forge
+ * module — the `jira:projectPage` (the full assistant shell) and the two issue-view
+ * modules, `jira:issuePanel` and `jira:issueContext` (both render the single-issue
+ * view) — so we branch on the Forge context at bootstrap instead of shipping a second
+ * HTML entry (Forge resources serve `index.html` from a directory, and `base: './'` +
+ * a nested multi-page build breaks the iframe asset paths). The branch happens before
+ * `App` renders, so the providers/theme/i18n shell stays unconditional.
+ *
+ * The `panel` mode covers BOTH issue-view modules: they expose the identical context
+ * shape (an `issue` + `project`), so we don't distinguish them — `issueContext` (the
+ * always-visible right-sidebar item) and `issuePanel` (the click-to-add main-column
+ * panel) render the same `IssuePanelPage`.
  */
 export type EntryContext =
   | { mode: 'page'; projectKey?: string }
@@ -24,7 +29,8 @@ interface ForgeContextish {
   }
 }
 
-/** Forge: a panel iff the context carries an issue (only the issuePanel does). */
+/** Forge: a panel iff the context carries an issue (the issue-view modules —
+ *  issuePanel / issueContext — do; the projectPage doesn't). */
 export function resolveForgeEntry(context: ForgeContextish): EntryContext {
   const issueKey = context.extension?.issue?.key
   const projectKey = context.extension?.project?.key

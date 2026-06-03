@@ -14,14 +14,18 @@ import { FixIssueDialog } from '@/features/fix-issue'
 import { ErrorState, PriorityIcon, PrimaryButton } from '@/shared/ui'
 
 /**
- * The `jira:issuePanel` view: a single issue, shown in Jira's right-hand panel on
- * the issue-detail screen. It answers "is this issue problematic, and why?" using
- * the SAME pure `detectProblems` rules as the table, then offers the SAME
- * `FixIssueDialog` remedies — so the panel is a focused, in-context entry point to
- * the assistant's two value props without re-implementing either.
+ * The single-issue view, shown on Jira's issue-detail screen. It backs BOTH issue-view
+ * modules — `jira:issueContext` (the always-visible item in the right context sidebar)
+ * and `jira:issuePanel` (the click-to-add panel in the main column) — which share the
+ * same context shape, so one component serves both (see `app/lib/entry-context.ts`).
+ * It answers "is this issue problematic, and why?" using the SAME pure `detectProblems`
+ * rules as the table, then offers the SAME `FixIssueDialog` remedies — a focused,
+ * in-context entry point to the assistant's two value props without re-implementing either.
  *
  * Which issue this is comes from the Forge context (the host issue), resolved at
- * bootstrap into the entry route; in the mock it's the `?panel=KEY` URL param. See
+ * bootstrap into the entry route; in the mock it's the `?panel=KEY` URL param. The
+ * `maxWidth` is an upper bound for the wide main-column panel; in the narrow context
+ * sidebar the column is narrower and the cap simply doesn't bind. See
  * `app/lib/entry-context.ts`.
  */
 export function IssuePanelPage({

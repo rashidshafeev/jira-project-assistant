@@ -26,6 +26,50 @@ modules:
       # the `main` resource (frontend/dist) — the SVG is bundled from frontend/public
       # by Vite, so it's self-hosted with the app (no external CDN dependency).
       icon: panel-icon.svg
+  # Collapsible item in the issue's RIGHT-HAND context sidebar (under the field
+  # groups). This is the always-visible counterpart to the issuePanel above: a
+  # jira:issuePanel is "click-to-add" by design and never auto-shows (Atlassian
+  # FRGE-734) — verified live, it didn't surface in the ••• / "+" menus — so it can't
+  # meet "the verdict is always visible on the issue". jira:issueContext IS present on
+  # every issue once installed, which is what we want. Same `main` bundle + `resolver`:
+  # issueContext exposes the SAME context shape (extension.issue.key + project.key) as
+  # issuePanel, so the bootstrap routing resolves it to the single-issue view with no
+  # code change (see app/lib/entry-context.ts). See docs/forge-gotchas.md.
+  jira:issueContext:
+    - key: project-assistant-issue-context
+      resource: main
+      resolver:
+        function: resolver
+      # `title` shows when the panel is expanded; `label` is the collapsed-row header
+      # in the sidebar — both required for issueContext (icon is optional here, unlike
+      # issuePanel; we reuse the same self-hosted glyph for brand consistency).
+      title: Project Assistant
+      label: Project Assistant
+      icon: panel-icon.svg
+      # NOTE: the collapsed-header STATUS LOZENGE (showing OK/Problem without expanding)
+      # is intentionally NOT set here — a manifest-literal `status` is static, and a
+      # per-issue verdict would need either a `dynamicProperties` function or a resolver
+      # that writes the issue-property lozenge, i.e. running `detectProblems` server-side.
+      # That breaks the "no server-side business logic; frontend owns the rules" design,
+      # so it's deferred as a follow-up (see docs/forge-gotchas.md).
+  # Top-level entry in Jira's GLOBAL left navigation (under "Apps"), so the assistant
+  # is reachable app-wide without first opening a project — unlike the projectPage,
+  # which only appears inside one project's sidebar. Serves the SAME `main` bundle in
+  # page mode (the full Shell): a global context carries no issue and no project, so
+  # resolveForgeEntry returns `{ mode: 'page' }` and the in-app project picker chooses
+  # the project. (It just can't pre-default to "the project you opened from" the way the
+  # projectPage does — there's no project in a global context. The projectPage keeps
+  # that nicety; see app/lib/forge-bootstrap.ts.)
+  jira:globalPage:
+    - key: project-assistant-global
+      resource: main
+      resolver:
+        function: resolver
+      title: Project Assistant
+      # Same full-bleed rationale as the projectPage: we render our own chrome, so we
+      # want the bare canvas (no Jira system header/title) — see the projectPage note.
+      layout: blank
+      icon: panel-icon.svg
   function:
     - key: resolver
       handler: index.handler
