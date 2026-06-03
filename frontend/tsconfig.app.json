@@ -14,10 +14,14 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    "resolveJsonModule": true,
 
     /* FSD absolute imports */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@mock/*": ["../mock/*"],
+      "@types": ["../src/types.ts"],
+      "@result": ["../src/result.ts"]
     },
 
     /* Strict type-checking */
@@ -32,5 +36,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../mock", "../src/types.ts", "../src/result.ts"]
 }
