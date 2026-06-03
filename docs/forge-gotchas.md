@@ -124,12 +124,15 @@ automatically — no reinstall needed. Exception: when **scopes or content permi
 change**, run `forge install --upgrade`. (After a CSP change, still hard-refresh — see
 above.)
 
-### Where the project page appears
-A `jira:projectPage` module shows up **inside a project's left sidebar** (typically under
-an "Apps" section), not in global navigation. The page is per-project, so the site needs
-at least one Jira project to view it.
+### Where the app's pages appear — global vs project nav
+A `jira:globalPage` shows up as a top-level entry in Jira's **global left navigation**
+(under "Apps" → "Your apps"), reachable from anywhere. A `jira:projectPage` instead shows up
+**inside a single project's left sidebar** (under that project's "Apps" section) and is
+per-project (the site needs at least one project to view it). We ship the **globalPage** —
+this app is a cross-project, picker-driven tool, so the global entry is its natural home; we
+dropped an earlier `projectPage` as redundant once the global page covered the same shell.
 
-### `jira:issuePanel` requires an `icon`; `jira:projectPage` does not
+### `jira:issuePanel` requires an `icon`; `jira:projectPage` / `jira:globalPage` do not
 A `jira:issuePanel` module **fails `forge deploy`** without an `icon` property — the
 projectPage module has no such requirement, so it's easy to miss when adding a second module
 to a working manifest. The icon accepts an absolute URL **or** a path resolved against a
@@ -157,26 +160,25 @@ verdict (what this app wants), plus what we actually ship:
 
 | Module | Surface | Always visible once installed? |
 | --- | --- | --- |
-| `jira:projectPage` | Full page under the project's **Apps** sidebar section | Yes (we ship this — the assistant shell) |
-| `jira:issuePanel` | Collapsible panel on the issue view, content above Activity | **No — click-to-add** (per docs: added via the issue's app/"+" menu, new issue view only) |
-| `jira:issueContext` | Collapsible item in the issue's **right-hand context** sidebar | **Yes — present on every issue (we ship this — the always-visible verdict)** |
+| `jira:globalPage` | Top-level entry in Jira's **global left nav** (under "Apps"), app-wide | **Yes — we ship this** (the full shell; the in-app picker chooses the project) |
+| `jira:issueContext` | Collapsible item in the issue's **right-hand context** sidebar | **Yes — we ship this** (present on every issue; the always-visible verdict) |
+| `jira:projectPage` | Full page under a **project's** "Apps" sidebar section | Yes, but per-project — *tried, then dropped as redundant with globalPage* |
+| `jira:issuePanel` | Collapsible panel on the issue view, content above Activity | **No — click-to-add** (issue's app/"+" menu, new issue view only) — *tried, then dropped* |
 | `jira:issueGlance` | Badge in the issue context that opens a flyout panel | Yes (the badge); content on click — **deprecated** |
 | `jira:issueActivity` | A tab inside the issue **Activity** section | Yes (the tab) |
-| `jira:globalPage` | Top-level entry in Jira's **global left nav** (under "Apps"), app-wide | **Yes (we ship this — the shell, reachable app-wide)** — but not project-scoped (the app's own picker chooses the project) |
 | `jira:dashboardGadget` | A gadget on a Jira dashboard | n/a (not issue-scoped) |
 
-We ship **four modules, one bundle** (routed at bootstrap by the context shape — see
+We ship **two modules, one bundle** (routed at bootstrap by the context shape — see
 `entry-context.ts`):
-- `jira:projectPage` — the full shell in a **project's** left sidebar (pre-defaults the picker
-  to that project).
-- `jira:globalPage` — the same full shell as a **global** left-nav entry (app-wide; the picker
-  defaults to the first project, since a global context has no project).
-- `jira:issueContext` — the always-visible single-issue verdict in the issue's **context sidebar**.
-- `jira:issuePanel` — the same verdict in the **opt-in main-column** panel.
+- `jira:globalPage` — the full shell as a **global** left-nav entry (app-wide; the picker
+  defaults to the first project, since a global context has no project). Renders `mode: 'page'`.
+- `jira:issueContext` — the always-visible single-issue verdict in the issue's **context
+  sidebar** (the host issue in context). Renders `mode: 'panel'`.
 
-`projectPage` + `globalPage` render `mode: 'page'`; `issueContext` + `issuePanel` render
-`mode: 'panel'`. `globalPage` is the answer to "put the app in the *global* sidebar"; the
-projectPage already covers the per-project sidebar.
+We earlier also shipped `jira:projectPage` (a per-project shell) and `jira:issuePanel` (an
+opt-in main-column verdict) and **dropped both**: the globalPage covers the same shell (the
+picker switches projects either way), and `issueContext` covers the per-issue verdict while
+being always-visible where the issuePanel isn't (see the trap below).
 
 **The trap that drove this — `issuePanel` is opt-in, `issueContext` is not.** After deploying
 the `issuePanel` module and running `forge install --upgrade`, the panel did **not** surface

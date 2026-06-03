@@ -25,7 +25,7 @@ REST directly (auth + CSP), so a resolver running with `asUser()` is the only pr
 | 3 | `shared/api/transport.ts` | `api` was resolved **once at load** to `bridgeClient` (prod) or `mockClient` (`VITE_USE_MOCKS`). In mock mode the path stops here — the mock answers locally, no bridge, no Jira. |
 | 4 | `shared/api/bridge-client.ts` | `assignIssue` calls `invoke('assignIssue', { issueId, accountId })`. |
 | 5 | `@forge/bridge` `invoke` | **Bridge boundary.** `postMessage` out of the iframe to the Forge host — RPC by resolver *name*, not a URL. |
-| 6 | Atlassian Forge platform | Authenticates app + user, dispatches to the FaaS function `index.handler` (wired in `manifest.yml`: `jira:projectPage → resolver.function`, `function[resolver].handler = index.handler`). |
+| 6 | Atlassian Forge platform | Authenticates app + user, dispatches to the FaaS function `index.handler` (wired in `manifest.yml`: `jira:globalPage → resolver.function`, `function[resolver].handler = index.handler`). |
 | 7 | `@forge/resolver` (`src/index.ts`) | Matches the name `'assignIssue'` to the registered handler. |
 | 8 | `define()` wrapper (`src/index.ts`) | `try` → cast the `unknown` payload, call the handler body. |
 | 9 | handler body (`src/index.ts`) | `await assignIssue(issueId, accountId)` then `return getIssue(issueId)` (read-after-write). |
