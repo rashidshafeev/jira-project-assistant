@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# Mock-preview flags only (VITE_USE_MOCKS + mock knobs) — no secrets, committed so
+# `npm run dev:mock` / the Docker `preview` service work zero-config from a clone.
+!.env.mock
 
 # Dependencies
 node_modules/
@@ -14,9 +17,24 @@ dist/
 build/
 static/**/build/
 
+# Playwright (E2E) — artifacts + downloaded browsers + saved auth
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+e2e/.auth/
+
 # Logs
 *.log
 npm-debug.log*
+
+# Local-only agent notes / state (ignored for now)
+CLAUDE.md
+.claude/
+docs/progress/
+
+# Test-assignment brief — local reference only, not part of the deliverable
+docs/assignment.md
 
 # OS / editor
 .DS_Store

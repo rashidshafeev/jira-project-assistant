@@ -1,84 +1,98 @@
 # Architecture Considerations
 
-This document captures the key architectural decisions for the Jira Project Assistant,
-in particular how the mandatory **Forge** and **Docker** requirements fit together.
+This document captures the key architectural decisions for the Jira Project Assistant.
 
-## Forge vs. Docker — the core tension
+## Platform: standard Forge (Custom UI + resolvers)
 
-Atlassian Forge is a **serverless** platform. In the standard model nothing is
-self-hosted:
+Atlassian Forge is **serverless** — in the standard model nothing is self-hosted:
 
 - **Frontend** (Custom UI): static React assets served from Atlassian's CDN, running
   inside a sandboxed iframe in the Jira product.
-- **Backend** (Forge functions / resolvers): run on Atlassian's own FaaS (AWS Lambda
-  under the hood). You write JS/TS and `forge deploy` — there is no container to host.
+- **Backend** (resolvers): run on Atlassian's own FaaS. You write JS/TS and `forge deploy`
+  — there is no container to host.
 
-So "Forge mandatory" and "Docker mandatory" are in mild tension: a pure Forge app has
-nowhere to run a Docker container. There are three ways to reconcile them.
+We use exactly this: Custom UI frontend + Forge resolvers, all Atlassian-hosted. Docker is
+**not** part of the runtime — it's just a one-command mock **preview** (`docker compose up`);
+building and `forge deploy` are host workflows. That rationale lives beside the file it
+concerns, in the `docker-compose.yml` comments.
 
-### Option 1 — Docker wraps the dev/build toolchain (chosen)
+### Forge Remote — considered, not used
 
-Ship a `Dockerfile` + `docker-compose.yml` that bundle Node + the Forge CLI +
-credentials, so the app can be built, tunnelled, and deployed reproducibly from a
-container. The Forge app itself stays 100% canonical (Custom UI React+MUI frontend +
-Forge resolvers backend, all Atlassian-hosted).
+Forge Remote keeps the Custom UI frontend but runs the backend in **your own Dockerized
+service** that Forge invokes over HTTPS — the one model where Docker is the actual runtime
+rather than just tooling. We rejected it: it needs a publicly reachable HTTPS endpoint,
+hosting, and roughly double the moving parts, all for a backend that does nothing but proxy
+Jira. (It's also why the earlier `JiraClient` seam was removed — see below.)
 
-- `forge tunnel` already *requires* Docker locally (it runs backend functions in a
-  container for live development), so this is a natural fit.
-- Simplest, most defensible, satisfies both requirements without distorting the
-  architecture.
+## Backend shape: a thin authenticated proxy
 
-### Option 2 — Forge Remote
+> **History.** An earlier iteration wrapped every Jira call behind a `JiraClient`
+> interface so a future **Forge Remote** backend (fetch + bearer token) could be swapped
+> in without a rewrite. We **removed that seam as YAGNI.** It was a speculative
+> abstraction anticipating a Forge Remote backend migration we don't need, and it
+> added a service/client/adapter layering that obscured how little the backend actually
+> does. The lesson kept: build the abstraction when the second implementation is real,
+> not before.
 
-A Forge Custom UI frontend, but the backend logic runs in **your own Dockerized
-service** that Forge invokes over HTTPS via Forge Remote. This is the only model where
-Docker is the actual runtime rather than just tooling.
+What's left is the smallest backend the platform allows. A Custom UI iframe **can't call
+Jira REST directly** (auth + CSP), so a server-side resolver running with `asUser()` is
+the *only* reason `src/` exists. That single fact drives the whole shape:
 
-- Trade-off: needs a publicly reachable HTTPS endpoint Atlassian can call, plus hosting
-  and roughly double the moving parts. Advanced feature; heavy for a test assignment.
+- **`src/endpoints/` — a thin authenticated proxy, one file per endpoint.** Each file
+  holds both its failure-mode spec *and* its proxy function (one `requestJira` call,
+  sharing the helpers in `endpoints/client.ts`), returning Jira's **raw** response — so
+  the docs and the logic for an endpoint live side by side. There is no business logic on
+  the server. The named functions *are* the value: they're the explicit, auditable
+  **allowlist** of operations the UI may perform with the app's Jira scopes (vs. a single
+  generic `invoke(method, path)` proxy, which would let a compromised frontend hit *any*
+  endpoint the scopes allow).
+- **`src/index.ts` — the bridge surface.** Each resolver validates its payload, calls the
+  proxy, and returns a typed `ResolverResult` envelope (success data or a normalized
+  error code). Reads return raw Jira; writes re-read the issue so the frontend gets fresh
+  state.
+- **`src/types.ts` + `src/result.ts` — the wire vocabulary.** `types.ts` holds the raw
+  Jira shapes that cross the bridge; `result.ts` holds the resolver result envelope +
+  normalized error taxonomy. Both are types-only, shared by the backend and (via the
+  `@types` / `@result` aliases) the frontend, so drift is a compile error.
+- **Mapping lives on the frontend, not the server.** A mapper (raw Jira → UI DTO) is a
+  pure function. The Forge FaaS sandbox is a hostile place for logic — slow deploys, you
+  must mock `@forge/api` to test it, no fast iteration — so the mapping lives where the
+  dev-experience is and beside the DTOs that define it (`frontend/src/shared/api/{issue,
+  member,project}.ts`). This is justified by **testability**, not by any transport-swap
+  story.
+- **Auto-assign is a frontend plan, not a server endpoint.** The round-robin (which member
+  takes which unassigned issue) is *pure logic* — it has no Forge dependency, so it's a
+  plain pure function (`features/auto-assign/model/plan.ts`) applied via the same
+  per-issue `assignIssue` the single Fix action uses. The only thing a server endpoint
+  would have bought is batching N writes into one bridge round-trip — but the bridge hop
+  isn't a Jira API call and doesn't count against rate limits, and the writes run with
+  `Promise.allSettled`, so it's one round-trip's *wall-time* regardless. At this scale
+  that batching is a speculative optimization; if it's ever needed, a dumb
+  `applyAssignments(pairs)` write-batching endpoint can be added **without moving the
+  logic** — the pure planner stays put.
 
-### Option 3 — Hybrid
+- **Per-user prefs are the one stateful resolver pair.** `src/prefs.ts`
+  (`getTablePrefs`/`setTablePrefs`, behind the `storage:app` scope) persists each user's table
+  layout as an **opaque blob keyed on `accountId`** — read/write only, no Jira call and no
+  domain logic. It's the lone exception to "the backend only proxies Jira", and it keeps the
+  same discipline: the server never interprets the blob.
 
-Forge frontend + Forge functions, plus a separate Dockerized helper/proxy for some
-logic. Usually the worst of both worlds; not pursued.
+**Net:** the backend is a pure proxy whose resolvers are the operation allowlist (plus the one
+opaque-storage pair for prefs); the only real logic (mapping, the auto-assign plan) is pure
+and lives on the frontend, where it's trivially testable and exercised end-to-end by the
+Playwright mock lane (see [`testing.md`](./testing.md)).
 
-## Decision
-
-**Option 1: standard Forge + Docker toolchain, architected with Remote-ready seams.**
-
-This is the fastest path to a working, reviewable app that ticks both Forge and Docker,
-while keeping the door open to Forge Remote.
-
-## Remote-ready seams
-
-We can migrate to Forge Remote later *without a rewrite* if we decouple from day one:
-
-- **Jira business logic** — plain, framework-agnostic TypeScript modules: fetch issues,
-  detect unassigned / low-priority-near-deadline issues, assign a user, bump priority,
-  compute project stats. These take inputs and return outputs; they know nothing about
-  Forge.
-- **Glue layer** — thin. Today it is a Forge resolver; under Remote it becomes an HTTP
-  handler in the container. Only this layer changes.
-- **`JiraClient` interface** — the one genuine difference between the two models is how
-  you authenticate to Jira:
-  - Standard Forge: `@forge/api` with `asApp()` / `asUser()` — auth is automatic from
-    the app's scopes.
-  - Forge Remote: the container authenticates with a token passed in the invocation
-    context (fetch + bearer token).
-
-  Putting every Jira call behind a small `JiraClient` interface means the Forge
-  implementation uses `@forge/api`, and a future Remote implementation uses fetch +
-  token. Swapping that one adapter plus the manifest is the entire migration.
-
-**Summary:** designing *for* Remote upfront only pays off if we commit to it (and accept
-the public-endpoint + hosting burden). Building standard Forge now with the `JiraClient`
-seam keeps the Remote migration a contained, afternoon-sized change rather than a redo.
+For the step-by-step path of a single call through every layer — frontend component →
+bridge → resolver → `requestJira` → Jira and back, and why `src/index.ts` is about as
+small as it can be — see [`request-flow.md`](./api/request-flow.md).
 
 ## Tech stack
 
-- TypeScript
-- React (functional components) + Material-UI (MUI) — Custom UI frontend
+- TypeScript (strict)
+- React (functional components) + Material-UI (MUI) + MUI X DataGrid — Custom UI frontend
+- **Zustand** (client/UI state) + **TanStack Query** (server state) — the deliberate
+  two-tool split (see [`frontend.md`](./frontend.md))
+- **react-i18next** (`en` + `ru`) — UI internationalization
 - Atlassian Forge (Custom UI + resolvers)
-- Jira REST API V3
-- State manager: TBD (Zustand / Redux Toolkit) — chosen at frontend scaffold time
-- Docker (Dockerfile + docker-compose) for a reproducible build/tunnel/deploy toolchain
+- Jira REST API v3
+- Docker (Dockerfile + docker-compose) for a one-command mock preview

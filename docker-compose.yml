@@ -1,0 +1,26 @@
+# Docker here is just the zero-setup PREVIEW: one command brings the app up with
+# in-memory mock data — no Jira account, no .env, no Forge CLI.
+#
+#   docker compose up   → preview: mock UI at http://localhost:5173
+#
+# Anything needing real Jira / Forge auth stays a HOST workflow (`npm run dev` +
+# `npm run tunnel` for live dev, `npm run deploy` to release — see README), not a
+# compose service: a tunnel is one-per-app/env and finicky to wrap, and the Forge
+# CLI runs fine on the host.
+
+services:
+  # Zero-setup demo: Vite dev server with the in-memory mock. Default service.
+  preview:
+    build:
+      context: .
+      target: toolchain
+    command: npm --prefix frontend run dev:mock
+    ports:
+      - "5173:5173"
+    # Live-reload host edits while keeping the container's installed deps
+    # (anonymous volume shadows the bind mount for node_modules).
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+      - ./mock:/app/mock
+      - ./src:/app/src

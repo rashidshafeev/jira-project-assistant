@@ -7,7 +7,19 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:mock": "npm --prefix frontend run dev:mock",
+    "dev": "npm --prefix frontend run dev",
+    "tunnel": "set -a; . ./.env 2>/dev/null || { echo 'Missing .env — copy .env.example and fill it in (forge needs credentials).'; exit 1; }; set +a; forge tunnel",
+    "build": "npm --prefix frontend run build",
+    "deploy": "set -a; . ./.env 2>/dev/null || { echo 'Missing .env — copy .env.example and fill it in (forge needs credentials).'; exit 1; }; set +a; npm --prefix frontend run build && forge deploy",
+    "test": "JIRA_APP_URL= playwright test",
+    "pretest": "playwright install chromium",
+    "test:mock": "JIRA_APP_URL= playwright test --project=mock",
+    "test:jira": "set -a; . ./.env 2>/dev/null || { echo 'Missing .env — the jira lane needs JIRA_APP_URL (+ a saved session or JIRA_LOGIN/JIRA_PASSWORD).'; exit 1; }; set +a; playwright install chromium && playwright test --project=jira",
+    "e2e": "npm test",
+    "e2e:ui": "JIRA_APP_URL= playwright test --ui",
+    "e2e:report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "atlassian",
@@ -17,5 +29,15 @@
     "mui"
   ],
   "author": "Рашид Шафеев <rashidshafeev@gmail.com>",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@forge/api": "^7.2.1",
+    "@forge/resolver": "^1.8.0"
+  },
+  "devDependencies": {
+    "@forge/cli": "^12.21.0",
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3"
+  }
 }

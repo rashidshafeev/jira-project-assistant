@@ -1,0 +1,42 @@
+# Dependencies are installed inside the image (npm ci); never copy host ones.
+**/node_modules
+
+# Build output is produced in-image (the `build` stage) and copied forward.
+frontend/dist
+dist
+
+# VCS / Forge local state.
+.git
+.gitignore
+.forge
+
+# Secrets: injected at run time via compose `env_file`, never baked into a layer.
+.env
+.env.local
+.env.*.local
+
+# Gitignored live status tracker + editor/local noise.
+docs/progress
+**/*.log
+.vscode
+.idea
+.DS_Store
+
+# E2E / Playwright artifacts — the suite runs on the host, never in this image
+# (Dockerfile installs no browser). e2e/.auth holds saved login state, so keep it
+# out of image layers entirely; the rest are just build bloat.
+e2e/.auth
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# Local-only agent notes / state (mirrors .gitignore).
+CLAUDE.md
+.claude
+
+# Test-assignment brief — local reference only, not shipped.
+docs/assignment.md
+
+# Note: frontend/.env.mock is intentionally NOT ignored — it carries the
+# (non-secret) VITE_USE_MOCKS flag the `preview` service needs.
