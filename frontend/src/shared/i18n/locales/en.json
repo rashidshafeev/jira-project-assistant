@@ -1,0 +1,87 @@
+{
+  "app": {
+    "title": "Jira Project Assistant"
+  },
+  "tabs": {
+    "issues": "Issues",
+    "team": "Team"
+  },
+  "issues": {
+    "project": "Project",
+    "empty": "No issues in this project."
+  },
+  "table": {
+    "key": "Key",
+    "summary": "Summary",
+    "status": "Status",
+    "assignee": "Assignee",
+    "priority": "Priority",
+    "actions": "Actions"
+  },
+  "issue": {
+    "unassigned": "Unassigned",
+    "fix": "Fix",
+    "noAssignee": "No assignee",
+    "lowPriorityDeadline": "Low priority with an approaching deadline",
+    "deadlineToday": "Deadline today",
+    "deadlineIn_one": "Deadline in {{count}} day",
+    "deadlineIn_other": "Deadline in {{count}} days",
+    "overdueBy_one": "{{count}} day overdue",
+    "overdueBy_other": "{{count}} days overdue",
+    "fixHint": "Resolve: {{reasons}}"
+  },
+  "deadline": {
+    "label": "At-risk window",
+    "days": "{{days}} days"
+  },
+  "panel": {
+    "stats": {
+      "total": "Total",
+      "unassigned": "Unassigned",
+      "atRisk": "At risk",
+      "inProgress": "In progress",
+      "done": "Done"
+    },
+    "autoAssign": "Assign all",
+    "confirm": {
+      "title": "Auto-assign unassigned issues",
+      "body": "This will assign {{count}} unassigned issue(s) to random active team members. Continue?",
+      "cancel": "Cancel",
+      "confirm": "Auto-assign"
+    },
+    "result": "Assigned {{count}} issue(s).",
+    "resultPartial": "Assigned {{assigned}} issue(s); {{failed}} failed."
+  },
+  "team": {
+    "member": "Member",
+    "assigned": "Assigned",
+    "activity": "Activity",
+    "done": "Done",
+    "inactive": "Inactive",
+    "empty": "No members in this project."
+  },
+  "fix": {
+    "title": "Fix {{key}}",
+    "assignHeading": "Assign to a team member",
+    "assignee": "Assignee",
+    "assign": "Assign",
+    "raiseHeading": "Raise priority",
+    "currentPriority": "Current priority: {{priority}}",
+    "raiseTo": "Raise to {{priority}}",
+    "close": "Close"
+  },
+  "errors": {
+    "forbidden": "You don't have permission to do that.",
+    "notFound": "That item no longer exists. Try refreshing.",
+    "conflict": "Someone else changed this issue. Refresh and try again.",
+    "rateLimited": "Too many requests. Please wait a moment and retry.",
+    "validation": "The request was invalid.",
+    "unauthorized": "Your session isn't authorized for this action.",
+    "unknown": "Something went wrong. Please try again.",
+    "retry": "Retry"
+  },
+  "settings": {
+    "toggleTheme": "Toggle light/dark",
+    "language": "Language"
+  }
+}
