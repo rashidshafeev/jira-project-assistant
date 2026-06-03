@@ -102,6 +102,17 @@ The bundler's `ts-loader` uses an older TypeScript. In the **backend** `tsconfig
 - do **not** set `"noEmit": true` (ts-loader then emits nothing → "TypeScript emitted no
   output"). Use the `--noEmit` *CLI flag* for type-checking instead.
 
+### `forge lint --fix` rewrites the manifest in place — and drops comments
+**Symptom:** after `forge lint --fix`, `manifest.yml` loses **all its comments** (and key
+order can shift), even when it reports "No issues found" and changes nothing semantic.
+**Cause:** `--fix` re-serializes the manifest from the parsed YAML AST; comments aren't part
+of the AST, so they're not round-tripped. It also won't *add* a missing required field for
+you (it didn't add the issuePanel `icon` — see below).
+**Fix:** don't run `--fix` on a hand-commented manifest. Use plain `forge lint` (no `--fix`)
+to validate and apply fixes by hand. If you already ran it, `git restore manifest.yml` and
+re-apply the change manually. Our manifest carries load-bearing rationale (the `layout:
+blank`, CSP, and `tunnel.port` notes), so this is a real loss, not cosmetic.
+
 ### Local Node must match the manifest runtime
 Manifest runtime is `nodejs22.x`; keep local Node on v22 (the Docker images pin it too).
 
@@ -117,6 +128,77 @@ above.)
 A `jira:projectPage` module shows up **inside a project's left sidebar** (typically under
 an "Apps" section), not in global navigation. The page is per-project, so the site needs
 at least one Jira project to view it.
+
+### `jira:issuePanel` requires an `icon`; `jira:projectPage` does not
+A `jira:issuePanel` module **fails `forge deploy`** without an `icon` property — the
+projectPage module has no such requirement, so it's easy to miss when adding a second module
+to a working manifest. The icon accepts an absolute URL **or** a path resolved against a
+declared resource. We self-host it from the `main` resource (`frontend/dist`), bundled from
+`frontend/public/panel-icon.svg` by Vite (publicDir → copied to `dist/`), so there's no
+external CDN dependency. See `manifest.yml`. (`forge lint --fix` will *not* add the missing
+field for you — it only reformats; see the CLI section.)
+
+### `forge install --upgrade` in a non-TTY needs every prompt pre-answered
+`forge install --upgrade` prompts interactively (site, product, environment, scope confirm)
+and **fails in a non-TTY** with *"Prompts can not be meaningfully rendered in non-TTY mode."*
+Pass them all as flags:
+```bash
+forge install --upgrade --site rashidshafeev.atlassian.net --product jira \
+  --environment development --confirm-scopes --non-interactive
+```
+(If the site is already current it prints "Site is already at the latest version" and no-ops.)
+Also note the **subcommand** form for listing installs: it's `forge install list`, **not**
+`forge install --list` (the latter errors "unknown option '--list'").
+
+### Where apps render in Jira — and the issuePanel "click-to-add" trap
+Forge offers several Jira UI surfaces; which one to pick depends on whether the content
+should be **always visible** or **opt-in**. The ones relevant to surfacing a per-issue
+verdict (what this app wants), plus what we actually ship:
+
+| Module | Surface | Always visible once installed? |
+| --- | --- | --- |
+| `jira:projectPage` | Full page under the project's **Apps** sidebar section | Yes (we ship this — the assistant shell) |
+| `jira:issuePanel` | Collapsible panel on the issue view, content above Activity | **No — click-to-add** (per docs: added via the issue's app/"+" menu, new issue view only) |
+| `jira:issueContext` | Collapsible item in the issue's **right-hand context** sidebar | **Yes — present on every issue (we ship this — the always-visible verdict)** |
+| `jira:issueGlance` | Badge in the issue context that opens a flyout panel | Yes (the badge); content on click — **deprecated** |
+| `jira:issueActivity` | A tab inside the issue **Activity** section | Yes (the tab) |
+| `jira:globalPage` | Top-level entry in Jira's **global left nav** (under "Apps"), app-wide | **Yes (we ship this — the shell, reachable app-wide)** — but not project-scoped (the app's own picker chooses the project) |
+| `jira:dashboardGadget` | A gadget on a Jira dashboard | n/a (not issue-scoped) |
+
+We ship **four modules, one bundle** (routed at bootstrap by the context shape — see
+`entry-context.ts`):
+- `jira:projectPage` — the full shell in a **project's** left sidebar (pre-defaults the picker
+  to that project).
+- `jira:globalPage` — the same full shell as a **global** left-nav entry (app-wide; the picker
+  defaults to the first project, since a global context has no project).
+- `jira:issueContext` — the always-visible single-issue verdict in the issue's **context sidebar**.
+- `jira:issuePanel` — the same verdict in the **opt-in main-column** panel.
+
+`projectPage` + `globalPage` render `mode: 'page'`; `issueContext` + `issuePanel` render
+`mode: 'panel'`. `globalPage` is the answer to "put the app in the *global* sidebar"; the
+projectPage already covers the per-project sidebar.
+
+**The trap that drove this — `issuePanel` is opt-in, `issueContext` is not.** After deploying
+the `issuePanel` module and running `forge install --upgrade`, the panel did **not** surface
+on Jira's modern issue view — not in the ••• **Actions** menu (only standard ops:
+Clone/Move/Archive/Delete/Print/Export…), not in the **"+" Add** menu (searching the panel
+title returned no matches), and nowhere in the page's accessibility tree (verified live on
+`rashidshafeev.atlassian.net`). That's by design: a `jira:issuePanel` is **click-to-add and
+never auto-shown** (Atlassian FRGE-734), so it can't meet "the verdict is always visible".
+**Fix (shipped):** we added `jira:issueContext`, which renders **inline in the right context
+sidebar on every issue with no add action**. Verified live — the "Project Assistant" item
+appears next to Details/Development/Automation, and expanding it shows the verdict (the same
+`IssuePanelPage`). Two gotchas seen during that check:
+- The collapsed header carried a **"DEVELOPMENT" lozenge** (`СРЕДА РАЗРАБОТКИ` in the RU
+  locale) — that's **Jira's own badge for a development-environment app**, not our manifest
+  `status`. It disappears for a production install.
+- `issueContext` **lazy-loads the iframe on first expand** (not on page load), so there's a
+  brief blank → spinner → content the first time it's opened. Expected; nothing to fix.
+The collapsed-header **status lozenge** (an at-a-glance OK/Problem without expanding) is left
+as a follow-up: a manifest-literal `status` is static, and a per-issue verdict needs a
+`dynamicProperties` function or a resolver that writes the issue-property lozenge — i.e.
+running the problem rules server-side, which cuts against this app's "frontend owns the rules"
+design. `jira:issueGlance` (the click-to-add flyout) is **deprecated** — don't reach for it.
 
 ## Tunnel
 
