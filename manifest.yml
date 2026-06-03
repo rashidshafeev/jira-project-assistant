@@ -22,6 +22,10 @@ modules:
       resolver:
         function: resolver
       title: Project Assistant
+      # Required for issuePanel (unlike projectPage). Relative path resolved against
+      # the `main` resource (frontend/dist) — the SVG is bundled from frontend/public
+      # by Vite, so it's self-hosted with the app (no external CDN dependency).
+      icon: panel-icon.svg
   function:
     - key: resolver
       handler: index.handler
