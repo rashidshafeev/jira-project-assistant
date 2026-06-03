@@ -17,6 +17,7 @@ export const mockClient: JiraApi = {
   getProjects: () => mockDb.getProjects(),
   getMembers: (projectKey) => mockDb.getMembers(projectKey),
   getIssues: (projectKey) => mockDb.getIssues(projectKey),
+  getIssue: (issueIdOrKey) => mockDb.getIssue(issueIdOrKey),
   assignIssue: (issueId, accountId) => mockDb.assignIssue(issueId, accountId),
   setPriority: (issueId, priority) => mockDb.setPriority(issueId, priority),
 

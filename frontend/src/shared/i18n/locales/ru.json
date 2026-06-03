@@ -34,6 +34,10 @@
     "overdueBy_other": "Просрочено на {{count}} дней",
     "fixHint": "Устранить: {{reasons}}"
   },
+  "issuePanel": {
+    "flagged": "Требует внимания",
+    "healthy": "Действия не требуются — задача в порядке."
+  },
   "deadline": {
     "label": "Окно риска",
     "days": "{{days}} дн."

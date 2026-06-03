@@ -64,6 +64,8 @@ export interface JiraApi {
   getProjects(): Promise<ProjectSummary[]>
   getMembers(projectKey: string): Promise<Member[]>
   getIssues(projectKey: string): Promise<Issue[]>
+  /** A single issue by id or key — used by the issue-panel view. */
+  getIssue(issueIdOrKey: string): Promise<Issue>
 
   assignIssue(issueId: string, accountId: string): Promise<Issue>
   setPriority(issueId: string, priority: IssuePriority): Promise<Issue>

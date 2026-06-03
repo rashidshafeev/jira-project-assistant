@@ -124,6 +124,26 @@ export class AppPage {
     return this.dialog().getByRole('button', { name: 'Auto-assign' })
   }
 
+  // ── Issue panel (jira:issuePanel view) ─────────────────────────────────────────
+  /** The "needs attention" alert that lists why an issue is flagged. */
+  panelFlagged(): Locator {
+    return this.root.getByTestId('panel-flagged')
+  }
+
+  /** The "looks healthy" alert shown when an issue has no problems left. */
+  panelHealthy(): Locator {
+    return this.root.getByTestId('panel-healthy')
+  }
+
+  /**
+   * The panel's standalone Fix button (opens the SAME Fix dialog as a grid row).
+   * Matched by its exact accessible name so it doesn't collide with the dialog
+   * title's "Fix <KEY>". English-bound, like the other name-based selectors.
+   */
+  panelFixButton(): Locator {
+    return this.root.getByRole('button', { name: 'Fix', exact: true })
+  }
+
   // ── Error surface ────────────────────────────────────────────────────────────
   alert(): Locator {
     return this.root.getByRole('alert')

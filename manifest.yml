@@ -11,6 +11,17 @@ modules:
       # breadcrumbs). We render our own chrome, so we want the bare canvas.
       # `projectPage` has no `viewportSize` — height is auto-resize (grows to fit).
       layout: blank
+  # Right-hand panel on the issue-detail screen. Serves the SAME `main` bundle as
+  # the project page — the frontend branches to the single-issue view by reading
+  # the host issue from `view.getContext()` at bootstrap (see app/lib/entry-context.ts),
+  # so there's no second build. Shares the one `resolver` (it only needs `getIssue` +
+  # the fix writes, all already in the allowlist).
+  jira:issuePanel:
+    - key: project-assistant-issue-panel
+      resource: main
+      resolver:
+        function: resolver
+      title: Project Assistant
   function:
     - key: resolver
       handler: index.handler

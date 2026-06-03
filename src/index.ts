@@ -16,6 +16,7 @@ type ResolverName =
   | 'getProjects'
   | 'getMembers'
   | 'getIssues'
+  | 'getIssue'
   | 'assignIssue'
   | 'setPriority'
   | 'getTablePrefs'
@@ -76,6 +77,13 @@ define('getMembers', (payload) => {
 define('getIssues', (payload) => {
   const { projectKey } = payload as { projectKey: string }
   return searchIssues(projectKey)
+})
+
+// A single fresh issue — backs the issue-panel view (which loads one issue by its
+// key from the Forge context) and shares the same raw→DTO mapping as the list.
+define('getIssue', (payload) => {
+  const { issueIdOrKey } = payload as { issueIdOrKey: string }
+  return getIssue(issueIdOrKey)
 })
 
 define('assignIssue', async (payload) => {

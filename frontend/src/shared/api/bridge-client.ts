@@ -30,6 +30,11 @@ export const bridgeClient: JiraApi = {
       .then(unwrap)
       .then((raw) => raw.map(mapIssue)),
 
+  getIssue: (issueIdOrKey) =>
+    invoke<ResolverResult<JiraIssue>>('getIssue', { issueIdOrKey })
+      .then(unwrap)
+      .then(mapIssue),
+
   assignIssue: (issueId, accountId) =>
     invoke<ResolverResult<JiraIssue>>('assignIssue', { issueId, accountId })
       .then(unwrap)

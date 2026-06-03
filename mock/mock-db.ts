@@ -76,12 +76,15 @@ async function delay(action: string): Promise<void> {
   maybeFail(action)
 }
 
-function findIssue(issueId: string): Issue {
+// Match on id OR key — writes (assign/setPriority) pass the numeric id, while the
+// issue-panel view loads by the human key (DEMO-2). The two namespaces are disjoint
+// in the fixtures, so one lookup serves both.
+function findIssue(issueIdOrKey: string): Issue {
   for (const list of Object.values(issuesByProject)) {
-    const found = list.find((i) => i.id === issueId)
+    const found = list.find((i) => i.id === issueIdOrKey || i.key === issueIdOrKey)
     if (found) return found
   }
-  throw new ApiError({ code: 'notFound', message: `[mock] issue ${issueId} not found` })
+  throw new ApiError({ code: 'notFound', message: `[mock] issue ${issueIdOrKey} not found` })
 }
 
 export const mockDb = {
@@ -98,6 +101,11 @@ export const mockDb = {
   async getIssues(projectKey: string): Promise<Issue[]> {
     await delay('getIssues')
     return structuredClone(issuesByProject[projectKey] ?? [])
+  },
+
+  async getIssue(issueIdOrKey: string): Promise<Issue> {
+    await delay('getIssue')
+    return structuredClone(findIssue(issueIdOrKey))
   },
 
   async assignIssue(issueId: string, accountId: string): Promise<Issue> {

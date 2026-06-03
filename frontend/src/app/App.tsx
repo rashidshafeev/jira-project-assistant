@@ -15,6 +15,7 @@ import { ControlPanel } from '@/widgets/control-panel'
 import { DeadlineWindowSelect } from '@/features/deadline-window'
 import { IssuesPage } from '@/pages/issues'
 import { TeamPage } from '@/pages/team'
+import { IssuePanelPage } from '@/pages/issue-panel'
 
 type TabKey = 'issues' | 'team'
 
@@ -125,7 +126,13 @@ export function App() {
   return (
     <Providers>
       <BootstrapGate>
-        <Shell />
+        {(entry) =>
+          entry.mode === 'panel' ? (
+            <IssuePanelPage issueKey={entry.issueKey} projectKey={entry.projectKey} />
+          ) : (
+            <Shell />
+          )
+        }
       </BootstrapGate>
     </Providers>
   )

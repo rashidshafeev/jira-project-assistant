@@ -30,6 +30,10 @@
     "overdueBy_other": "{{count}} days overdue",
     "fixHint": "Resolve: {{reasons}}"
   },
+  "issuePanel": {
+    "flagged": "Needs attention",
+    "healthy": "No action needed — this issue looks healthy."
+  },
   "deadline": {
     "label": "At-risk window",
     "days": "{{days}} days"
