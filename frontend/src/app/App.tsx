@@ -1,8 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import AppBar from '@mui/material/AppBar'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import Box from '@mui/material/Box'
@@ -10,27 +7,26 @@ import ViewListRoundedIcon from '@mui/icons-material/ViewListRounded'
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded'
 import { Providers } from '@/app/providers'
 import { BootstrapGate } from '@/app/ui/BootstrapGate'
-import { DevSettings } from '@/app/ui/DevSettings'
+import { MockHost } from '@/app/ui/MockHost'
 import { ControlPanel } from '@/widgets/control-panel'
 import { DeadlineWindowSelect } from '@/features/deadline-window'
 import { IssuesPage } from '@/pages/issues'
 import { TeamPage } from '@/pages/team'
 import { IssuePanelPage } from '@/pages/issue-panel'
+import type { EntryContext } from '@/app/lib/entry-context'
 
 type TabKey = 'issues' | 'team'
 
-// In Forge, Jira renders its own system header with the app title, so our own
-// title bar would be redundant — we only show it in the standalone mock preview
-// (which has no product chrome), where it also hosts the dev theme/lang controls.
-// Build-time constant: in a Forge/prod build it folds to `false`, so the mock-only
-// title bar + dev controls below are tree-shaken out (no `MuiAppBar` in `dist`).
+// Build-time constant. In a Forge/prod build it folds to `false`, so the mock-only
+// host shell (title bar + dev controls + view switcher, all in `MockHost`) is
+// tree-shaken out of `dist`. In Forge, Jira draws the surrounding chrome itself.
 const useMocks = import.meta.env.VITE_USE_MOCKS === 'true'
 
-// Fill-to-bottom (100vh shell + internally-scrolling tables) only makes sense in
-// the standalone mock page. The Forge Custom UI iframe AUTO-RESIZES to its content
-// (no `viewportSize` in the manifest), so there is no stable viewport to fill:
-// `100vh` collapses or pushes scrollbars onto the host Jira page. In Forge we let
-// content flow and the grid grow (`autoHeight`, see AppDataGrid) — the native model.
+// Fill-to-bottom (the shell fills its parent + tables scroll internally) only makes
+// sense in the standalone mock, where `MockHost` provides a bounded-height (100vh)
+// frame for Shell to fill. The Forge Custom UI iframe AUTO-RESIZES to its content
+// (no `viewportSize`), so there is no stable viewport to fill — content flows and the
+// grid grows (`autoHeight`, see AppDataGrid). So this is gated on the mock.
 const fillHeight = useMocks
 
 function Shell() {
@@ -40,34 +36,25 @@ function Shell() {
   const [tab, setTab] = useState<TabKey>('issues')
 
   return (
-    // Mock: full-height flex column so the active page fills to the bottom and
-    // scrolls *inside* its table. Forge: no fixed height — the auto-resizing iframe
-    // grows with content (using 100vh here causes a stray vertical scroll in Jira).
+    // Mock: fill the host-shell content area (bounded flex column) so the active page
+    // reaches the bottom and scrolls *inside* its table. Forge: no fill — the
+    // auto-resizing iframe grows with content. The mock-only title bar / dev controls
+    // are NOT here; they live in MockHost so the panel view shares them too.
     <Box
       sx={{
         bgcolor: 'background.default',
         ...(fillHeight && {
-          height: '100vh',
+          flex: 1,
+          minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
         }),
       }}
     >
-      {useMocks && (
-        <AppBar position="static" color="default" elevation={1}>
-          <Toolbar variant="dense" sx={{ gap: 2 }}>
-            <Typography variant="h6" component="h1" sx={{ flexGrow: 1 }}>
-              {t('app.title')}
-            </Typography>
-            <DevSettings />
-          </Toolbar>
-        </AppBar>
-      )}
-
       {/* No Container gutters/maxWidth — full-bleed for a native Jira-panel feel
           (the Forge projectPage iframe is itself bare). A little padding keeps the
-          content off the very edges. In mock this region flexes to fill the 100vh
-          shell; in Forge it just flows and the iframe grows around it. */}
+          content off the very edges. In mock this region flexes to fill the shell;
+          in Forge it just flows and the iframe grows around it. */}
       <Box
         sx={{
           // `blank` strips ALL of Jira's projectPage chrome (incl. its asymmetric
@@ -122,15 +109,29 @@ function Shell() {
   )
 }
 
+/** Render the view for a resolved entry context: the single-issue panel or the full
+ *  project page. Shared by the Forge path (rendered directly) and the mock path
+ *  (rendered inside MockHost's chrome). */
+function renderEntry(entry: EntryContext) {
+  return entry.mode === 'panel' ? (
+    <IssuePanelPage issueKey={entry.issueKey} projectKey={entry.projectKey} />
+  ) : (
+    <Shell />
+  )
+}
+
 export function App() {
   return (
     <Providers>
       <BootstrapGate>
         {(entry) =>
-          entry.mode === 'panel' ? (
-            <IssuePanelPage issueKey={entry.issueKey} projectKey={entry.projectKey} />
+          // Mock: wrap the view in the host shell (dev controls + page/panel switcher
+          // + faux issue frame). Forge: render the view directly — Jira draws the
+          // chrome. `useMocks` is a build constant, so MockHost is tree-shaken from prod.
+          useMocks ? (
+            <MockHost initialEntry={entry} renderEntry={renderEntry} />
           ) : (
-            <Shell />
+            renderEntry(entry)
           )
         }
       </BootstrapGate>
