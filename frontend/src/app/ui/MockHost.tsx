@@ -42,11 +42,11 @@ interface MockHostProps {
 /**
  * Mock-ONLY host shell. It stands in for the Jira chrome that wraps our app in real
  * Forge: the dev controls (theme/language) and a page/panel view switcher live
- * OUTSIDE the app's own views, so BOTH the projectPage and the issuePanel can be
- * previewed — and toggled — from one place (the panel view itself renders no chrome,
- * exactly as in Forge, so the switcher can't live inside it). For a panel preview it
- * frames the panel inside a faux issue-detail layout so it shows at its real ~360px
- * right-rail width.
+ * OUTSIDE the app's own views, so BOTH the globalPage shell and the issueContext panel
+ * can be previewed — and toggled — from one place (the panel view itself renders no
+ * chrome, exactly as in Forge, so the switcher can't live inside it). For a panel
+ * preview it frames the panel inside a faux issue-detail layout so it shows at its real
+ * ~360px right-rail width.
  *
  * Tree-shaken from prod: App mounts this only behind the `useMocks` build constant,
  * so none of it reaches a Forge build.
@@ -90,7 +90,7 @@ export function MockHost({ initialEntry, renderEntry }: MockHostProps) {
           <FauxIssueView>{renderEntry(entry)}</FauxIssueView>
         </Box>
       ) : (
-        // Page preview: a bounded flex column so the projectPage's tables fill and
+        // Page preview: a bounded flex column so the globalPage's tables fill and
         // scroll internally (the grid uses a definite height in mock, not autoHeight).
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {renderEntry(entry)}

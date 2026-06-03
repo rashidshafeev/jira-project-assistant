@@ -1,5 +1,4 @@
 import { useThemeStore } from '@/app/model/theme.store'
-import { useSessionStore } from '@/app/model/session.store'
 import i18n, { resolveLanguage } from '@/shared/i18n'
 import {
   resolveForgeEntry,
@@ -61,14 +60,9 @@ async function runBootstrap(): Promise<EntryContext> {
     // One context fetch feeds both the locale and the page/panel routing.
     const context = await view.getContext()
     await i18n.changeLanguage(resolveLanguage(context.locale))
-    const entry = resolveForgeEntry(context)
-    // Default the project picker to the project the page was opened from, instead of
-    // the first project in the list. Seeded before the gate renders the ControlPanel,
-    // so its "default to first project" effect sees a value and leaves it alone.
-    if (entry.mode === 'page' && entry.projectKey) {
-      useSessionStore.getState().setSelectedProjectKey(entry.projectKey)
-    }
-    return entry
+    // The global page is not project-scoped (no project in context), so there's nothing
+    // to seed here — the picker defaults to the first project (see ControlPanel).
+    return resolveForgeEntry(context)
   } catch {
     // Locale + routing are best-effort; fall back to the default language + page.
     return { mode: 'page' }

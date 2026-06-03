@@ -1,48 +1,38 @@
 modules:
-  jira:projectPage:
-    - key: project-assistant
+  # PRIMARY surface: a top-level entry in Jira's GLOBAL left navigation (under "Apps"),
+  # reachable app-wide. This app is a cross-project triage tool driven by an in-app
+  # project picker, so a global page — not a per-project one — is its natural home.
+  # (We previously also shipped a `jira:projectPage`; it was dropped as redundant once
+  # the global page covered the same shell — the picker switches projects either way.)
+  # `layout: blank` = "a completely empty canvas for full viewport customization": no
+  # Jira system header/title or breadcrumbs (we render our own chrome). There's no
+  # `viewportSize`, so height auto-resizes (grows to fit). A global context carries no
+  # issue and no project, so resolveForgeEntry returns `{ mode: 'page' }` and the picker
+  # defaults to the first project (see app/lib/entry-context.ts).
+  jira:globalPage:
+    - key: project-assistant-global
       resource: main
       resolver:
         function: resolver
       title: Project Assistant
-      # `blank` = "a completely empty canvas for full viewport customization":
-      # no Jira system header/title, breadcrumbs, AND no project-page left margin
-      # (the deprecated `basic` layout we used before added a ~40px left gutter +
-      # breadcrumbs). We render our own chrome, so we want the bare canvas.
-      # `projectPage` has no `viewportSize` — height is auto-resize (grows to fit).
       layout: blank
-  # Right-hand panel on the issue-detail screen. Serves the SAME `main` bundle as
-  # the project page — the frontend branches to the single-issue view by reading
-  # the host issue from `view.getContext()` at bootstrap (see app/lib/entry-context.ts),
-  # so there's no second build. Shares the one `resolver` (it only needs `getIssue` +
-  # the fix writes, all already in the allowlist).
-  jira:issuePanel:
-    - key: project-assistant-issue-panel
-      resource: main
-      resolver:
-        function: resolver
-      title: Project Assistant
-      # Required for issuePanel (unlike projectPage). Relative path resolved against
-      # the `main` resource (frontend/dist) — the SVG is bundled from frontend/public
-      # by Vite, so it's self-hosted with the app (no external CDN dependency).
       icon: panel-icon.svg
-  # Collapsible item in the issue's RIGHT-HAND context sidebar (under the field
-  # groups). This is the always-visible counterpart to the issuePanel above: a
-  # jira:issuePanel is "click-to-add" by design and never auto-shows (Atlassian
-  # FRGE-734) — verified live, it didn't surface in the ••• / "+" menus — so it can't
-  # meet "the verdict is always visible on the issue". jira:issueContext IS present on
-  # every issue once installed, which is what we want. Same `main` bundle + `resolver`:
-  # issueContext exposes the SAME context shape (extension.issue.key + project.key) as
-  # issuePanel, so the bootstrap routing resolves it to the single-issue view with no
-  # code change (see app/lib/entry-context.ts). See docs/forge-gotchas.md.
+  # Collapsible item in the issue's RIGHT-HAND context sidebar (under the field groups),
+  # present on EVERY issue once installed — the always-visible per-issue verdict. (We
+  # trialed `jira:issuePanel` for this, but it's "click-to-add" by design and never
+  # auto-shows — Atlassian FRGE-734; verified live, it didn't surface in the ••• / "+"
+  # menus — so it couldn't meet "always visible on the issue" and was dropped. See
+  # docs/forge-gotchas.md.) Serves the SAME `main` bundle + `resolver` as the global
+  # page: the host issue in `view.getContext()` routes the bootstrap to the single-issue
+  # view (mode 'panel'), so there's no second build (see app/lib/entry-context.ts).
   jira:issueContext:
     - key: project-assistant-issue-context
       resource: main
       resolver:
         function: resolver
-      # `title` shows when the panel is expanded; `label` is the collapsed-row header
-      # in the sidebar — both required for issueContext (icon is optional here, unlike
-      # issuePanel; we reuse the same self-hosted glyph for brand consistency).
+      # `title` shows when the panel is expanded; `label` is the collapsed-row header in
+      # the sidebar — both required for issueContext (icon is optional here; we reuse the
+      # self-hosted SVG, bundled from frontend/public by Vite, for brand consistency).
       title: Project Assistant
       label: Project Assistant
       icon: panel-icon.svg
@@ -52,24 +42,6 @@ modules:
       # that writes the issue-property lozenge, i.e. running `detectProblems` server-side.
       # That breaks the "no server-side business logic; frontend owns the rules" design,
       # so it's deferred as a follow-up (see docs/forge-gotchas.md).
-  # Top-level entry in Jira's GLOBAL left navigation (under "Apps"), so the assistant
-  # is reachable app-wide without first opening a project — unlike the projectPage,
-  # which only appears inside one project's sidebar. Serves the SAME `main` bundle in
-  # page mode (the full Shell): a global context carries no issue and no project, so
-  # resolveForgeEntry returns `{ mode: 'page' }` and the in-app project picker chooses
-  # the project. (It just can't pre-default to "the project you opened from" the way the
-  # projectPage does — there's no project in a global context. The projectPage keeps
-  # that nicety; see app/lib/forge-bootstrap.ts.)
-  jira:globalPage:
-    - key: project-assistant-global
-      resource: main
-      resolver:
-        function: resolver
-      title: Project Assistant
-      # Same full-bleed rationale as the projectPage: we render our own chrome, so we
-      # want the bare canvas (no Jira system header/title) — see the projectPage note.
-      layout: blank
-      icon: panel-icon.svg
   function:
     - key: resolver
       handler: index.handler

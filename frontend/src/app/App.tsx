@@ -51,15 +51,15 @@ function Shell() {
         }),
       }}
     >
-      {/* No Container gutters/maxWidth — full-bleed for a native Jira-panel feel
-          (the Forge projectPage iframe is itself bare). A little padding keeps the
-          content off the very edges. In mock this region flexes to fill the shell;
-          in Forge it just flows and the iframe grows around it. */}
+      {/* No Container gutters/maxWidth — full-bleed for a native Jira feel (the Forge
+          globalPage iframe is itself bare). A little padding keeps the content off the
+          very edges. In mock this region flexes to fill the shell; in Forge it just
+          flows and the iframe grows around it. */}
       <Box
         sx={{
-          // `blank` strips ALL of Jira's projectPage chrome (incl. its asymmetric
-          // ~40px left-only gutter), so the content would sit flush against the
-          // iframe edges. We add our own *symmetric* gutter back for breathing room.
+          // The `layout: blank` globalPage strips ALL of Jira's page chrome (system
+          // header/title, breadcrumbs), so content would sit flush against the iframe
+          // edges. We add our own symmetric gutter back for breathing room.
           px: 3,
           pt: 2,
           display: 'flex',
