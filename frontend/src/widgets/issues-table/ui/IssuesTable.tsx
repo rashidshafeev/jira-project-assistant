@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { GridColDef } from '@mui/x-data-grid'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
+import Link from '@mui/material/Link'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineRounded'
@@ -12,6 +13,7 @@ import { AppDataGrid, StatusLozenge, PriorityIcon, PRIORITY_RANK, PrimaryButton 
 import type { Issue } from '@/shared/api'
 import { detectProblems, hasProblem, dueInDays, type IssueProblems } from '@/entities/issue'
 import { usePersistedGrid } from '@/features/table-prefs'
+import { openIssue } from '@/shared/lib'
 
 interface IssuesTableProps {
   issues: Issue[]
@@ -129,9 +131,32 @@ export function IssuesTable({
                 <WarningAmberIcon sx={{ fontSize: 16, color: 'warning.main' }} />
               </Tooltip>
             )}
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {p.row.key}
-            </Typography>
+            {/* The key opens the issue in Jira (a new tab, via router.open). A raw <a>
+                can't reach the real Jira site from inside the sandboxed Custom UI
+                iframe — a relative link resolves against the iframe origin — so we
+                route through the bridge (openIssue). The href stays for affordance
+                (pointer cursor, right-click "copy link") but we preventDefault and let
+                the bridge navigate; in the mock openIssue is a no-op (the tooltip says
+                it opens in Jira). It's a link (role=link), NOT a button, so the row's
+                lone-button Fix selector stays unambiguous. */}
+            {/* `describeChild`: attach the tooltip as a DESCRIPTION (aria-describedby),
+                not the accessible NAME. Without it, MUI sets aria-label="Open in Jira"
+                on the <a>, masking the key text — every key would read identically to a
+                screen reader. With it, the link's name stays the key. */}
+            <Tooltip title={t('issue.openInJira')} describeChild>
+              <Link
+                href={`/browse/${p.row.key}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  void openIssue(p.row.key)
+                }}
+                underline="hover"
+                variant="body2"
+                sx={{ fontWeight: 600 }}
+              >
+                {p.row.key}
+              </Link>
+            </Tooltip>
           </Box>
         ),
       },

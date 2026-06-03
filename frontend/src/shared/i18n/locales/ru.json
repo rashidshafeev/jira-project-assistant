@@ -32,7 +32,8 @@
     "overdueBy_few": "Просрочено на {{count}} дня",
     "overdueBy_many": "Просрочено на {{count}} дней",
     "overdueBy_other": "Просрочено на {{count}} дней",
-    "fixHint": "Устранить: {{reasons}}"
+    "fixHint": "Устранить: {{reasons}}",
+    "openInJira": "Открыть в Jira"
   },
   "issuePanel": {
     "flagged": "Требует внимания",

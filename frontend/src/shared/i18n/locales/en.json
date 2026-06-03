@@ -28,7 +28,8 @@
     "deadlineIn_other": "Deadline in {{count}} days",
     "overdueBy_one": "{{count}} day overdue",
     "overdueBy_other": "{{count}} days overdue",
-    "fixHint": "Resolve: {{reasons}}"
+    "fixHint": "Resolve: {{reasons}}",
+    "openInJira": "Open in Jira"
   },
   "issuePanel": {
     "flagged": "Needs attention",

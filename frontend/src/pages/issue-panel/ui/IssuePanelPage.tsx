@@ -11,7 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { useIssue, detectProblems, hasProblem, dueInDays } from '@/entities/issue'
 import { useDeadlineWindow } from '@/features/deadline-window'
 import { FixIssueDialog } from '@/features/fix-issue'
-import { ErrorState, StatusLozenge, PriorityIcon, PrimaryButton } from '@/shared/ui'
+import { ErrorState, PriorityIcon, PrimaryButton } from '@/shared/ui'
 
 /**
  * The `jira:issuePanel` view: a single issue, shown in Jira's right-hand panel on
@@ -93,19 +93,34 @@ export function IssuePanelPage({
   return (
     <Box sx={{ p: 2, maxWidth: 480 }}>
       <Stack spacing={2}>
-        <Box>
-          <Typography variant="overline" color="text.secondary">
-            {issue.key}
-          </Typography>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-            {issue.summary}
-          </Typography>
-        </Box>
+        {/* Compact issue key, for identity only. We deliberately DON'T reprint the
+            summary or status: in Forge this panel is docked on the issue screen, which
+            already shows all of that — the panel's value is the verdict + remedy below,
+            not an echo of the host fields. The key stays as a small in-panel anchor. */}
+        <Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1 }}>
+          {issue.key}
+        </Typography>
 
+        {/* Lead with the verdict — the one thing the host issue screen doesn't surface. */}
+        {flagged ? (
+          <Alert severity="warning" data-testid="panel-flagged">
+            <AlertTitle>{t('issuePanel.flagged')}</AlertTitle>
+            <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </Box>
+          </Alert>
+        ) : (
+          <Alert severity="success" data-testid="panel-healthy">
+            {t('issuePanel.healthy')}
+          </Alert>
+        )}
+
+        {/* Just the two fields the rules reason about (priority, assignee) — so the
+            verdict's "why" reads at a glance and the healthy state isn't bare. Status
+            is dropped: it feeds no rule and only duplicates the host screen. */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-          <Meta label={t('table.status')}>
-            <StatusLozenge label={issue.status.name} category={issue.status.category} />
-          </Meta>
           <Meta label={t('table.priority')}>
             {issue.priority ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
@@ -137,23 +152,10 @@ export function IssuePanelPage({
           </Meta>
         </Box>
 
-        {flagged ? (
-          <Alert severity="warning" data-testid="panel-flagged">
-            <AlertTitle>{t('issuePanel.flagged')}</AlertTitle>
-            <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-              {reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </Box>
-          </Alert>
-        ) : (
-          <Alert severity="success" data-testid="panel-healthy">
-            {t('issuePanel.healthy')}
-          </Alert>
-        )}
-
+        {/* Card-footer action: right-aligned primary, opening the same Fix dialog the
+            issues table uses. */}
         {flagged && (
-          <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
             <PrimaryButton onClick={() => setFixing(true)}>{t('issue.fix')}</PrimaryButton>
           </Box>
         )}
@@ -172,7 +174,7 @@ export function IssuePanelPage({
   )
 }
 
-/** A labelled meta field (status / priority / assignee) in the panel header. */
+/** A labelled meta field (priority / assignee) in the panel. */
 function Meta({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Box>
