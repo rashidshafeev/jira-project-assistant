@@ -80,8 +80,19 @@ flow, not a description of something wrong with our current dialogs.
 **Do not migrate all modals to the native `Modal`.** On the global page it would be a pure
 regression (cold start, lost cache, double serialization, more code) to fix a problem the big
 iframe doesn't have. Native `Modal` earns its complexity only for a **large flow launched from
-a surface too small to host an overlay** — which our two-control Fix is not. The current
-direction: keep MUI `<Dialog>` on the page, render the Fix UI **inline** in the issue panel
-(extract a shared `FixIssueForm` so both reuse one source of truth), and keep the native
+a surface too small to host an overlay** — which our two-control Fix is not. Keep the native
 `Modal` in reserve for a future big-flow-from-small-surface case.
+
+**What we ship (implemented).** The Fix content is one shared component,
+`features/fix-issue/ui/FixIssueForm.tsx` (the error alert + assign + raise sections), rendered
+two ways:
+- **Global-page table** → `FixIssueDialog` wraps `FixIssueForm` in a MUI `<Dialog>`.
+- **Issue-context panel** → `IssuePanelPage` renders the same `FixIssueForm` **inline** in a
+  `<Collapse>`, no modal.
+
+The form reports its in-flight state up via `onBusyChange` so each wrapper can lock its own
+dismiss control, and calls `onResolved` on a successful assign/raise (the dialog closes; the
+panel collapses and refetches the single-issue query). The E2E page object follows suit with a
+`fixSurface()` locator that matches *either* the dialog or the inline `panel-fix` box, so one
+spec asserts both chromes.
 Ref: <https://developer.atlassian.com/platform/forge/custom-ui-bridge/modal/>

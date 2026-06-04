@@ -116,18 +116,28 @@ export class AppPage {
     return this.root.getByRole('dialog')
   }
 
+  /**
+   * The Fix remedies surface, regardless of chrome — a MUI `<Dialog>` when opened from
+   * the issues table, or the inline `panel-fix` box when expanded in the issue panel.
+   * Both render the SAME `FixIssueForm`, and only one is open at a time, so the controls
+   * below resolve uniquely either way.
+   */
+  fixSurface(): Locator {
+    return this.root.locator('[role="dialog"], [data-testid="panel-fix"]')
+  }
+
   async chooseAssignee(name: string): Promise<void> {
-    await this.dialog().getByRole('combobox', { name: 'Assignee' }).click()
+    await this.fixSurface().getByRole('combobox', { name: 'Assignee' }).click()
     await this.root.getByRole('option', { name }).click()
   }
 
   assignSubmit(): Locator {
-    return this.dialog().getByRole('button', { name: 'Assign', exact: true })
+    return this.fixSurface().getByRole('button', { name: 'Assign', exact: true })
   }
 
-  /** A "Raise to <priority>" button in the Fix dialog (the raise-priority remedy). */
+  /** A "Raise to <priority>" button in the Fix surface (the raise-priority remedy). */
   raisePriority(priority: string): Locator {
-    return this.dialog().getByRole('button', { name: `Raise to ${priority}`, exact: true })
+    return this.fixSurface().getByRole('button', { name: `Raise to ${priority}`, exact: true })
   }
 
   confirmAutoAssign(): Locator {
@@ -146,12 +156,17 @@ export class AppPage {
   }
 
   /**
-   * The panel's standalone Fix button (opens the SAME Fix dialog as a grid row).
-   * Matched by its exact accessible name so it doesn't collide with the dialog
-   * title's "Fix <KEY>". English-bound, like the other name-based selectors.
+   * The panel's standalone Fix button (expands the SAME Fix form a grid row opens in a
+   * dialog — inline here). Matched by its exact accessible name so it doesn't collide
+   * with the form's "Fix <KEY>" heading. English-bound, like the other name selectors.
    */
   panelFixButton(): Locator {
     return this.root.getByRole('button', { name: 'Fix', exact: true })
+  }
+
+  /** The inline Fix form expanded in the issue panel (the panel's modal-free remedy). */
+  panelFix(): Locator {
+    return this.root.getByTestId('panel-fix')
   }
 
   // ── Error surface ────────────────────────────────────────────────────────────
