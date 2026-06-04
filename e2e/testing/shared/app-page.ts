@@ -34,6 +34,16 @@ export class AppPage {
     await this.page.goto(`/${query}`)
   }
 
+  /**
+   * Load the admin settings view (the app-wide config form). In the mock it's the
+   * `?admin` route; in Forge it's a separate `jira:adminPage` module (admin-only),
+   * so on the jira target this would instead navigate to that page. The at-risk
+   * window + grace controls live here now, not on the main shell.
+   */
+  async gotoAdmin(): Promise<void> {
+    await this.page.goto('/?admin')
+  }
+
   // ── Global chrome (control panel) ───────────────────────────────────────────
   projectPicker(): Locator {
     return this.root.getByRole('combobox', { name: 'Project' })
@@ -53,7 +63,7 @@ export class AppPage {
     return this.root.getByTestId(`stat-${key}`)
   }
 
-  // ── At-risk (deadline) window ──────────────────────────────────────────────────
+  // ── At-risk (deadline) window — lives on the admin page (see gotoAdmin) ─────────
   deadlineWindow(): Locator {
     return this.root.getByRole('combobox', { name: 'At-risk window' })
   }

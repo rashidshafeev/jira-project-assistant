@@ -12,26 +12,29 @@ import { DevSettings } from '@/app/ui/DevSettings'
 import type { EntryContext } from '@/app/lib/entry-context'
 
 /**
- * Mock preview targets for the view switcher. Keys are real fixture issues chosen
- * to show each panel state; the labels deliberately avoid the raw issue key and any
- * member name, so the switcher's visible text never collides with the panel's own
- * content (the E2E lane matches issue keys / assignee names by free text).
+ * Mock preview targets for the view switcher — each carries the {@link EntryContext}
+ * it renders. The panel previews point at real fixture issues chosen to show each
+ * state; their labels deliberately avoid the raw issue key and any member name, so
+ * the switcher's visible text never collides with the panel's own content (the E2E
+ * lane matches issue keys / assignee names by free text).
  */
-const PREVIEWS: { id: string; issueKey: string | null; label: string }[] = [
-  { id: 'page', issueKey: null, label: 'Page' },
-  { id: 'unassigned', issueKey: 'DEMO-2', label: 'Panel: unassigned' },
-  { id: 'overdue', issueKey: 'DEMO-4', label: 'Panel: overdue + low' },
-  { id: 'healthy', issueKey: 'DEMO-1', label: 'Panel: healthy' },
+const PREVIEWS: { id: string; entry: EntryContext; label: string }[] = [
+  { id: 'page', entry: { mode: 'page' }, label: 'Page' },
+  { id: 'admin', entry: { mode: 'admin' }, label: 'Admin' },
+  { id: 'unassigned', entry: panelEntry('DEMO-2'), label: 'Panel: unassigned' },
+  { id: 'overdue', entry: panelEntry('DEMO-4'), label: 'Panel: overdue + low' },
+  { id: 'healthy', entry: panelEntry('DEMO-1'), label: 'Panel: healthy' },
 ]
 
-function entryFor(issueKey: string | null): EntryContext {
-  if (!issueKey) return { mode: 'page' }
+function panelEntry(issueKey: string): EntryContext {
   return { mode: 'panel', issueKey, projectKey: issueKey.split('-')[0] ?? '' }
 }
 
 function currentId(entry: EntryContext): string {
-  if (entry.mode === 'page') return 'page'
-  return PREVIEWS.find((p) => p.issueKey === entry.issueKey)?.id ?? 'unassigned'
+  if (entry.mode === 'panel') {
+    return PREVIEWS.find((p) => p.entry.mode === 'panel' && p.entry.issueKey === entry.issueKey)?.id ?? 'unassigned'
+  }
+  return entry.mode // 'page' | 'admin' map 1:1 to their preview ids
 }
 
 interface MockHostProps {
@@ -70,7 +73,8 @@ export function MockHost({ initialEntry, renderEntry }: MockHostProps) {
             value={currentId(entry)}
             onChange={(_, id: string | null) => {
               // Ignore a click on the already-active button (exclusive → null).
-              if (id) setEntry(entryFor(PREVIEWS.find((p) => p.id === id)?.issueKey ?? null))
+              const next = id ? PREVIEWS.find((p) => p.id === id)?.entry : undefined
+              if (next) setEntry(next)
             }}
             aria-label="Mock preview"
           >

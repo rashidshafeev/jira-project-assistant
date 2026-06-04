@@ -54,6 +54,15 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   Jira shapes that cross the bridge; `result.ts` holds the resolver result envelope +
   normalized error taxonomy. Both are types-only, shared by the backend and (via the
   `@types` / `@result` aliases) the frontend, so drift is a compile error.
+- **`src/domain/problem.ts` — shared domain rules (the one shared *runtime* module).** The
+  pure problem-detection rules (`detectProblems` et al.) live in a framework-free module under
+  `src/domain/` rather than inside the frontend, so any **server-side** job that must classify
+  issues (it runs with no UI in the loop) can import the *same* rules instead of duplicating the
+  calendar-day math and drifting. The frontend re-exports it via the `@domain/problem` alias, so
+  UI callers still import from `@/entities/issue`. Unlike the types-only `types.ts`/`result.ts`,
+  it ships **runtime** code, so it's bundled into whatever output uses it — kept dependency-free
+  for exactly that reason. The *proxy resolvers* still hold no logic; the rules live in this
+  shared layer, not in them.
 - **Mapping lives on the frontend, not the server.** A mapper (raw Jira → UI DTO) is a
   pure function. The Forge FaaS sandbox is a hostile place for logic — slow deploys, you
   must mock `@forge/api` to test it, no fast iteration — so the mapping lives where the
@@ -71,16 +80,26 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   `applyAssignments(pairs)` write-batching endpoint can be added **without moving the
   logic** — the pure planner stays put.
 
-- **Per-user prefs are the one stateful resolver pair.** `src/prefs.ts`
-  (`getTablePrefs`/`setTablePrefs`, behind the `storage:app` scope) persists each user's table
-  layout as an **opaque blob keyed on `accountId`** — read/write only, no Jira call and no
-  domain logic. It's the lone exception to "the backend only proxies Jira", and it keeps the
-  same discipline: the server never interprets the blob.
+- **App storage holds two kinds of state, neither of it Jira data.** Both behind the one
+  `storage:app` scope, both opaque/structured persistence the server never reasons over:
+  (1) **per-user table prefs** — `src/prefs.ts` (`getTablePrefs`/`setTablePrefs`) persists each
+  user's table layout as an opaque blob **keyed on `accountId`**; (2) **app-wide config** —
+  `src/config.ts` keeps ONE record (a *fixed* key, no `accountId`) for the at-risk window, read
+  by every view. This is the lone exception to "the backend only proxies Jira", and it keeps the
+  same discipline: the server stores, it doesn't interpret.
+- **Admin config is gated by surface + resolver partition, not a runtime check** (Forge apps
+  can't call `/mypermissions`). The config *read* (`getAppConfig`) lives on the main resolver
+  (`src/index.ts`), so every view can render the same window; the config *write* (`setAppConfig`)
+  lives on a SEPARATE resolver (`src/admin.ts`) wired only to the `jira:adminPage` module, which
+  Jira renders to admins only. The bridge dispatches `invoke()` to the calling module's resolver,
+  so the write is unreachable from the non-admin global page / issue panel. See
+  [`forge-gotchas.md`](./forge-gotchas.md) ("Admin-only app-wide config WITHOUT /mypermissions").
 
-**Net:** the backend is a pure proxy whose resolvers are the operation allowlist (plus the one
-opaque-storage pair for prefs); the only real logic (mapping, the auto-assign plan) is pure
-and lives on the frontend, where it's trivially testable and exercised end-to-end by the
-Playwright mock lane (see [`testing.md`](./testing.md)).
+**Net:** the backend is a pure proxy whose resolvers are the operation allowlist (plus the
+opaque app-storage for table prefs + the app-wide config); the only real logic (mapping, the
+auto-assign plan, the problem rules) is **pure** — mapping and the plan live on the frontend,
+the rules in the shared `src/domain` layer — so all of it is trivially testable and exercised
+end-to-end by the Playwright mock lane (see [`testing.md`](./testing.md)).
 
 For the step-by-step path of a single call through every layer — frontend component →
 bridge → resolver → `requestJira` → Jira and back, and why `src/index.ts` is about as

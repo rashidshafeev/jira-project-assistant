@@ -9,7 +9,7 @@ import Avatar from '@mui/material/Avatar'
 import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useIssue, detectProblems, hasProblem, dueInDays } from '@/entities/issue'
-import { useDeadlineWindow } from '@/features/deadline-window'
+import { useDeadlineWindow } from '@/features/app-config'
 import { FixIssueDialog } from '@/features/fix-issue'
 import { ErrorState, PriorityIcon, PrimaryButton } from '@/shared/ui'
 

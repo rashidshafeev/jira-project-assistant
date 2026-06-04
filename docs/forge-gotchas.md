@@ -141,6 +141,26 @@ declared resource. We self-host it from the `main` resource (`frontend/dist`), b
 external CDN dependency. See `manifest.yml`. (`forge lint --fix` will *not* add the missing
 field for you — it only reformats; see the CLI section.)
 
+### Module `icon` needs the `resource:<key>;<path>` form — a bare path 404s silently
+**Symptom:** a module's `icon` shows as a **broken-image glyph** in Jira (the browser's
+"no image" placeholder), even though the SVG is bundled in `dist` and the app otherwise
+works. `forge lint` and `forge deploy` both pass — it **only breaks at render time**.
+**Cause:** a **bare relative path** (`icon: panel-icon.svg`) is handed to Jira's chrome and
+resolved **against the current page URL**, not the app's resource. On an issue page that
+becomes `https://<site>/browse/panel-icon.svg` → 404. (Confirmed live: the `<img>` `src` was
+literally `…/browse/panel-icon.svg`, `naturalWidth: 0`.)
+**Fix:** use one of the three forms the manifest actually supports (per the module docs):
+```yaml
+icon: resource:main;panel-icon.svg   # bundled asset, key=resource key, ;-separated path
+# or an absolute URL (https://…) — but that's subject to an egress permission check
+# or a data:image/…;base64,… URI
+```
+With `resource:main;panel-icon.svg`, Jira rewrites it to the Forge resource CDN
+(`https://icon.cdn.prod.atlassian-dev.net/<appId>/<env>/<version>/main/panel-icon.svg`) and it
+loads. The icon is a flat `<img>` (no design-token theming), so it won't auto-adapt to
+light/dark — pick a hue that reads on both.
+Ref: <https://developer.atlassian.com/platform/forge/manifest-reference/modules/jira-issue-context/>
+
 ### `forge install --upgrade` in a non-TTY needs every prompt pre-answered
 `forge install --upgrade` prompts interactively (site, product, environment, scope confirm)
 and **fails in a non-TTY** with *"Prompts can not be meaningfully rendered in non-TTY mode."*
@@ -201,6 +221,23 @@ as a follow-up: a manifest-literal `status` is static, and a per-issue verdict n
 `dynamicProperties` function or a resolver that writes the issue-property lozenge — i.e.
 running the problem rules server-side, which cuts against this app's "frontend owns the rules"
 design. `jira:issueGlance` (the click-to-add flyout) is **deprecated** — don't reach for it.
+
+## Admin-only app-wide config WITHOUT `/mypermissions` — surface + resolver partition
+The "approaching deadline" at-risk window is an **app-wide** setting only an **admin** should
+change. Two non-obvious facts forced the mechanism:
+- **Forge/OAuth apps cannot call `/rest/api/3/mypermissions`** — so there is **no runtime
+  "is this caller an admin?" check** available to a resolver.
+- **The fix is the module surface + a dedicated resolver.** Put the config UI on a
+  **`jira:adminPage`** (Jira renders it *only* inside admin settings -> admin-only), and give
+  that module its **own `function` resolver** (`src/admin.ts`). The bridge dispatches `invoke()`
+  to **the calling module's resolver**, so `setAppConfig` — defined *only* in the admin resolver
+  — is **unreachable from the non-admin global page / issue panel**. That partition IS the gate;
+  the global page gets a read-only `getAppConfig`.
+- **App-wide vs per-user storage is just the key shape.** `storage:app` is app-wide by default
+  (one record per installation). Per-user blobs (`prefs.ts`, the old per-user settings) put the
+  `accountId` *in* the key; the app-wide config uses a **fixed key with no accountId**. Same scope.
+Refs: <https://developer.atlassian.com/platform/forge/manifest-reference/modules/jira-admin-page/> ;
+<https://developer.atlassian.com/cloud/jira/platform/scopes-for-oauth-2-3LO-and-forge-apps/>
 
 ## Tunnel
 

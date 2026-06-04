@@ -14,7 +14,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { useSessionStore } from '@/app/model/session.store'
 import { useProjects } from '@/entities/project'
 import { useIssues, computeStats } from '@/entities/issue'
-import { useDeadlineWindow } from '@/features/deadline-window'
+import { useDeadlineWindow } from '@/features/app-config'
 import { AutoAssignButton } from '@/features/auto-assign'
 import { errorMessageKey } from '@/shared/api'
 

@@ -12,6 +12,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       // Dev-only mock layer lives at the repo root, outside the app's src.
       '@mock': fileURLToPath(new URL('../mock', import.meta.url)),
+      // Shared, framework-free domain rules (`detectProblems` et al.), also
+      // imported by the backend weekly-health trigger (src/digest.ts). UNLIKE the
+      // `@types`/`@result` aliases below, this is RUNTIME code (not type-only), so
+      // it IS bundled into the build — kept dependency-free for exactly that reason.
+      '@domain': fileURLToPath(new URL('../src/domain', import.meta.url)),
       // Shared bridge types, also defined/imported by the backend. Types only,
       // so they erase at build time. `@types` = raw Jira wire shapes
       // (`src/types.ts`); `@result` = the resolver result/error envelope

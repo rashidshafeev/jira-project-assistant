@@ -9,10 +9,10 @@ import { Providers } from '@/app/providers'
 import { BootstrapGate } from '@/app/ui/BootstrapGate'
 import { MockHost } from '@/app/ui/MockHost'
 import { ControlPanel } from '@/widgets/control-panel'
-import { DeadlineWindowSelect } from '@/features/deadline-window'
 import { IssuesPage } from '@/pages/issues'
 import { TeamPage } from '@/pages/team'
 import { IssuePanelPage } from '@/pages/issue-panel'
+import { AdminPage } from '@/pages/admin'
 import type { EntryContext } from '@/app/lib/entry-context'
 
 type TabKey = 'issues' | 'team'
@@ -71,19 +71,11 @@ function Shell() {
             tabs because project selection is shared by Issues and Team. */}
         <ControlPanel />
 
-        {/* Tabs on the left, the at-risk window control on the right. The shared
-            bottom border (the tabs' baseline) lives on this row, not the Tabs. */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            mb: 2,
-            borderBottom: 1,
-            borderColor: 'divider',
-          }}
-        >
+        {/* View tabs. The bottom border is the tabs' baseline; it lives on this row
+            (not the Tabs) so it spans the full width. The at-risk window control used
+            to sit on the right here — it moved to the admin page, since the window is
+            now one app-wide value an admin sets, not a per-user toggle. */}
+        <Box sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tab} onChange={(_, value: TabKey) => setTab(value)}>
             <Tab
               label={t('tabs.issues')}
@@ -100,7 +92,6 @@ function Shell() {
               sx={{ minHeight: 48 }}
             />
           </Tabs>
-          <DeadlineWindowSelect />
         </Box>
 
         {tab === 'issues' ? <IssuesPage /> : <TeamPage />}
@@ -109,15 +100,18 @@ function Shell() {
   )
 }
 
-/** Render the view for a resolved entry context: the single-issue panel or the full
- *  project page. Shared by the Forge path (rendered directly) and the mock path
- *  (rendered inside MockHost's chrome). */
+/** Render the view for a resolved entry context: the single-issue panel, the admin
+ *  settings page, or the full project shell. Shared by the Forge path (rendered
+ *  directly) and the mock path (rendered inside MockHost's chrome). */
 function renderEntry(entry: EntryContext) {
-  return entry.mode === 'panel' ? (
-    <IssuePanelPage issueKey={entry.issueKey} projectKey={entry.projectKey} />
-  ) : (
-    <Shell />
-  )
+  switch (entry.mode) {
+    case 'panel':
+      return <IssuePanelPage issueKey={entry.issueKey} projectKey={entry.projectKey} />
+    case 'admin':
+      return <AdminPage />
+    default:
+      return <Shell />
+  }
 }
 
 export function App() {

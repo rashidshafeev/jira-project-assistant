@@ -48,15 +48,17 @@ export type { ProjectSummary } from './project'
 export type TablePrefs = Record<string, unknown>
 
 /**
- * Per-user app settings — a small TYPED blob (unlike the opaque table prefs).
- * Currently just the "approaching deadline" window. Persisted separately from the
- * table prefs so the two features don't fight over one storage blob (see
- * `src/settings.ts`). Every field is optional → an absent/empty blob means "use
- * the app defaults", which is what a brand-new user gets.
+ * App-wide configuration — ONE record for the whole installation (not per-user),
+ * mirrored from the backend (`src/config.ts`). Read by every view to drive the
+ * at-risk highlighting + stats; WRITTEN only from the admin page, whose resolver
+ * owns `setAppConfig` (`src/admin.ts`) — Jira renders that surface to admins only.
+ * The default lives in `shared/config/app-config.ts` (so it's importable without
+ * this types-only file gaining a runtime value).
  */
-export interface UserSettings {
-  /** "Approaching deadline" window in days; absent → the app default applies. */
-  deadlineWarningDays?: number
+export interface AppConfig {
+  /** "Approaching deadline" window in days: a low-priority issue due within it
+   *  (or overdue) is flagged at risk. Shared by the table, stats and Fix dialog. */
+  deadlineWarningDays: number
 }
 
 /** Everything the UI can ask the backend to do — expressed in clean DTOs. */
@@ -78,7 +80,12 @@ export interface JiraApi {
   getTablePrefs(): Promise<TablePrefs>
   setTablePrefs(prefs: TablePrefs): Promise<void>
 
-  /** App-storage ops (not Jira): load/save this user's typed settings blob. */
-  getSettings(): Promise<UserSettings>
-  setSettings(settings: UserSettings): Promise<void>
+  /**
+   * App-wide config (not Jira). `getAppConfig` is callable from every view (the
+   * read lives on the main resolver); `setAppConfig` only succeeds from the admin
+   * page, the one surface whose resolver defines the write (see `src/admin.ts`).
+   * Both return the full, defaulted config; the setter echoes the clamped value.
+   */
+  getAppConfig(): Promise<AppConfig>
+  setAppConfig(config: AppConfig): Promise<AppConfig>
 }

@@ -16,7 +16,7 @@ modules:
         function: resolver
       title: Project Assistant
       layout: blank
-      icon: panel-icon.svg
+      icon: resource:main;panel-icon.svg
   # Collapsible item in the issue's RIGHT-HAND context sidebar (under the field groups),
   # present on EVERY issue once installed — the always-visible per-issue verdict. (We
   # trialed `jira:issuePanel` for this, but it's "click-to-add" by design and never
@@ -33,18 +33,42 @@ modules:
       # `title` shows when the panel is expanded; `label` is the collapsed-row header in
       # the sidebar — both required for issueContext (icon is optional here; we reuse the
       # self-hosted SVG, bundled from frontend/public by Vite, for brand consistency).
+      # NOTE the `resource:<key>;<path>` icon syntax: a BARE `panel-icon.svg` is treated
+      # by Jira as page-relative (→ /browse/panel-icon.svg) and 404s to a broken-image
+      # glyph — and `forge lint`/`deploy` DON'T catch it (it only breaks at render time).
+      # Use `resource:main;panel-icon.svg` (or an absolute URL / data: URI). See gotchas.
       title: Project Assistant
       label: Project Assistant
-      icon: panel-icon.svg
+      icon: resource:main;panel-icon.svg
       # NOTE: the collapsed-header STATUS LOZENGE (showing OK/Problem without expanding)
       # is intentionally NOT set here — a manifest-literal `status` is static, and a
       # per-issue verdict would need either a `dynamicProperties` function or a resolver
       # that writes the issue-property lozenge, i.e. running `detectProblems` server-side.
       # That breaks the "no server-side business logic; frontend owns the rules" design,
       # so it's deferred as a follow-up (see docs/forge-gotchas.md).
+  # Admin-only settings page — appears in Jira Settings → Apps, a surface Jira
+  # shows ONLY to admins. This is the app's admin GATE: Forge apps can't call
+  # /mypermissions, so there's no runtime admin check; instead the SURFACE
+  # restricts who can load the iframe, and a SEPARATE resolver (admin-resolver →
+  # src/admin.ts) owns the config WRITE. The bridge routes invoke() to the calling
+  # module's resolver, so setAppConfig is unreachable from the (non-admin) global
+  # page / issue panel — those only get the read-only getAppConfig on the main
+  # resolver. Same `main` bundle (mode 'admin' via app/lib/entry-context.ts). See
+  # docs/forge-gotchas.md ("Admin-only app-wide config WITHOUT /mypermissions").
+  jira:adminPage:
+    - key: project-assistant-admin
+      resource: main
+      resolver:
+        function: admin-resolver
+      title: Project Assistant
+      layout: blank
+      icon: resource:main;panel-icon.svg
   function:
     - key: resolver
       handler: index.handler
+    # Resolver for the admin page ONLY (the config-write gate; see src/admin.ts).
+    - key: admin-resolver
+      handler: admin.handler
 
 resources:
   - key: main
@@ -66,8 +90,8 @@ permissions:
     - write:jira-work
     # list project members / assignable users
     - read:jira-user
-    # persist per-user UI table preferences (sort/filter/column layout) in
-    # Forge app storage, keyed by the caller's accountId (see src/prefs.ts)
+    # Forge app storage: per-user UI table prefs (keyed by accountId, src/prefs.ts)
+    # and the app-wide config blob (fixed key, src/config.ts).
     - storage:app
   content:
     # MUI/Emotion inject CSS as inline <style> tags at runtime; the default

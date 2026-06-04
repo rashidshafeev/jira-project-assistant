@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography'
 import { useSessionStore } from '@/app/model/session.store'
 import { useProjects } from '@/entities/project'
 import { useIssues } from '@/entities/issue'
-import { useDeadlineWindow } from '@/features/deadline-window'
+import { useDeadlineWindow } from '@/features/app-config'
 import { IssuesTable } from '@/widgets/issues-table'
 import { FixIssueDialog } from '@/features/fix-issue'
 import { ErrorState } from '@/shared/ui'
@@ -20,8 +20,9 @@ export function IssuesPage() {
   // panel reads) to distinguish "projects still loading / failed" from "selected".
   const projectsQuery = useProjects()
   const issuesQuery = useIssues(selectedProjectKey)
-  // Per-user at-risk window — the table highlighting and the dialog's problem
-  // detection must use the same threshold, so the page owns it and passes it down.
+  // App-wide at-risk window (admin-set) — the table highlighting and the dialog's
+  // problem detection must use the same threshold, so the page reads it and passes
+  // it down.
   const warningDays = useDeadlineWindow()
 
   // One `now` for the whole render so the table's highlighting and the dialog's

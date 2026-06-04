@@ -20,6 +20,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@mock/*": ["../mock/*"],
+      "@domain/*": ["../src/domain/*"],
       "@types": ["../src/types.ts"],
       "@result": ["../src/result.ts"]
     },
@@ -36,5 +37,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../mock", "../src/types.ts", "../src/result.ts"]
+  "include": ["src", "../mock", "../src/domain", "../src/types.ts", "../src/result.ts"]
 }

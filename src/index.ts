@@ -8,7 +8,7 @@ import {
   setPriority,
 } from './endpoints'
 import { getTablePrefs, setTablePrefs } from './prefs'
-import { getUserSettings, setUserSettings } from './settings'
+import { getAppConfig } from './config'
 import { toApiErrorPayload, type ResolverResult } from './result'
 
 /** Resolver names invoked over the Forge bridge — the operation allowlist. */
@@ -21,8 +21,7 @@ type ResolverName =
   | 'setPriority'
   | 'getTablePrefs'
   | 'setTablePrefs'
-  | 'getSettings'
-  | 'setSettings'
+  | 'getAppConfig'
 
 /**
  * The slice of Forge's resolver context we read. Forge populates `accountId` with
@@ -108,14 +107,11 @@ define('setTablePrefs', (payload, context) => {
   return setTablePrefs(context.accountId ?? '', prefs)
 })
 
-// Per-user app settings (currently the at-risk deadline window) — same pattern as
-// the table prefs but a separate storage blob, so the two features never clobber
-// each other's writes. Opaque to the backend (see settings.ts).
-define('getSettings', (_payload, context) => getUserSettings(context.accountId ?? ''))
-
-define('setSettings', (payload, context) => {
-  const { settings } = payload as { settings: Record<string, unknown> }
-  return setUserSettings(context.accountId ?? '', settings)
-})
+// App-wide config (the at-risk deadline window + unassigned grace) — READ ONLY here
+// so every view can render the same window. WRITES live on the admin resolver
+// (`src/admin.ts`, behind `jira:adminPage`), which Jira shows only to admins; the
+// bridge routes `invoke` to the calling module's resolver, so there's no
+// `setAppConfig` reachable from the (non-admin) global page. See docs/forge-gotchas.md.
+define('getAppConfig', () => getAppConfig())
 
 export const handler = resolver.getDefinitions()

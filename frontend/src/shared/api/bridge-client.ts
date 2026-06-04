@@ -1,7 +1,7 @@
 import { invoke } from '@forge/bridge'
 import type { JiraIssue, JiraProject, JiraUser } from '@types'
 import type { ResolverResult } from '@result'
-import type { IssuePriority, JiraApi, TablePrefs, UserSettings } from './contract'
+import type { AppConfig, IssuePriority, JiraApi, TablePrefs } from './contract'
 import { mapIssue, PRIORITY_ID_BY_NAME } from './issue'
 import { mapUser } from './member'
 import { mapProject } from './project'
@@ -58,13 +58,12 @@ export const bridgeClient: JiraApi = {
   setTablePrefs: (prefs) =>
     invoke<ResolverResult<void>>('setTablePrefs', { prefs }).then(unwrap),
 
-  // Same null→empty normalization as the prefs: a brand-new user has no settings
-  // blob yet, so the caller always gets an object and falls back to app defaults.
-  getSettings: () =>
-    invoke<ResolverResult<UserSettings | null>>('getSettings')
-      .then(unwrap)
-      .then((settings) => settings ?? {}),
+  // The backend always returns a full, defaulted config (never null), so there's
+  // nothing to normalize. `setAppConfig` only resolves from the admin page — the
+  // global page / issue panel never call it (its resolver isn't on those modules).
+  getAppConfig: () =>
+    invoke<ResolverResult<AppConfig>>('getAppConfig').then(unwrap),
 
-  setSettings: (settings) =>
-    invoke<ResolverResult<void>>('setSettings', { settings }).then(unwrap),
+  setAppConfig: (config) =>
+    invoke<ResolverResult<AppConfig>>('setAppConfig', { config }).then(unwrap),
 }

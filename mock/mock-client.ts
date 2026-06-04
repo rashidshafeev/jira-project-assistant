@@ -1,4 +1,5 @@
-import type { JiraApi, TablePrefs, UserSettings } from '@/shared/api/contract'
+import type { AppConfig, JiraApi, TablePrefs } from '@/shared/api/contract'
+import { DEFAULT_APP_CONFIG } from '@/shared/config/app-config'
 import { mockDb } from './mock-db'
 
 /**
@@ -11,7 +12,7 @@ import { mockDb } from './mock-db'
  * standing in for Forge app storage (which the bridge transport uses for real).
  */
 const PREFS_KEY = 'mock:table-prefs'
-const SETTINGS_KEY = 'mock:user-settings'
+const APP_CONFIG_KEY = 'mock:app-config'
 
 export const mockClient: JiraApi = {
   getProjects: () => mockDb.getProjects(),
@@ -40,22 +41,25 @@ export const mockClient: JiraApi = {
     return Promise.resolve()
   },
 
-  getSettings: () => {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    let settings: UserSettings = {}
+  // App-wide config: persisted to localStorage (one fixed key, no accountId), so
+  // the mock preview stands in for Forge app storage. Missing/partial/corrupt blobs
+  // fall back to the defaults, mirroring the backend's defaulting (src/config.ts).
+  getAppConfig: () => {
+    const raw = localStorage.getItem(APP_CONFIG_KEY)
+    let config: AppConfig = DEFAULT_APP_CONFIG
     if (raw) {
       try {
-        settings = JSON.parse(raw) as UserSettings
+        config = { ...DEFAULT_APP_CONFIG, ...(JSON.parse(raw) as Partial<AppConfig>) }
       } catch {
-        // Corrupt blob — fall back to defaults rather than crash the app.
-        settings = {}
+        config = DEFAULT_APP_CONFIG
       }
     }
-    return Promise.resolve(settings)
+    return Promise.resolve(config)
   },
 
-  setSettings: (settings) => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-    return Promise.resolve()
+  setAppConfig: (config) => {
+    const next: AppConfig = { ...DEFAULT_APP_CONFIG, ...config }
+    localStorage.setItem(APP_CONFIG_KEY, JSON.stringify(next))
+    return Promise.resolve(next)
   },
 }

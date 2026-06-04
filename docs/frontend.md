@@ -131,13 +131,18 @@ identically on mock or real data).
 All layers are built out (not a skeleton). Where things live:
 
 - **`app`** — `providers/` (a token-mapped MUI theme synced to the host color mode + the
-  TanStack Query client), `model/` (theme + session Zustand stores), `lib/forge-bootstrap.ts`
-  (theme/locale bootstrap), `ui/` (`BootstrapGate`, mock-only `DevSettings`), `App.tsx`.
-- **`pages`** — `issues`, `team` (each composes the control panel + its table).
+  TanStack Query client), `model/` (theme + session Zustand stores), `lib/` (`forge-bootstrap.ts`
+  theme/locale bootstrap + `entry-context.ts`, which resolves the Forge module — by `moduleKey`
+  + the context's issue — into a `page` | `panel` | `admin` view), `ui/` (`BootstrapGate`,
+  mock-only `DevSettings`/`MockHost`), `App.tsx`.
+- **`pages`** — `issues`, `team` (each composes the control panel + its table), `issue-panel`
+  (the single-issue verdict in the `jira:issueContext` sidebar), `admin` (the app-wide config
+  form, shown only on the admin-only `jira:adminPage`).
 - **`widgets`** — `issues-table`, `team-table`, `control-panel`.
 - **`features`** — `fix-issue` (assign / raise priority + optimistic mutations),
   `auto-assign` (the pure round-robin plan + confirm dialog), `table-prefs` (persisted grid
-  layout via Forge storage).
+  layout via Forge storage), `app-config` (the app-wide at-risk window: `useDeadlineWindow`
+  read by the views, the admin-only `AppConfigForm` for the write).
 - **`entities`** — `issue` (problem detection, stats), `member`, `project`.
 - **`shared`** — `api/` (contract + transport + mappers), `ui/` (`AppDataGrid`,
   `StatusLozenge`, `PriorityIcon`), `i18n/` (en + ru), `config/atlassian-tokens.ts`.

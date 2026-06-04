@@ -39,6 +39,13 @@
     "label": "At-risk window",
     "days": "{{days}} days"
   },
+  "admin": {
+    "title": "Project Assistant settings",
+    "subtitle": "These settings apply to everyone on this site and can only be changed by Jira admins.",
+    "deadline": {
+      "help": "Low-priority issues due within this many days (or overdue) are flagged as at risk — in the table, the stats, and the issue panel."
+    }
+  },
   "panel": {
     "stats": {
       "total": "Total",
