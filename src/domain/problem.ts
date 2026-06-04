@@ -12,8 +12,8 @@
  * valid under both tsconfigs (backend NodeNext + frontend bundler/verbatim). It
  * deliberately imports nothing: it defines the minimal {@link ProblemInput} shape
  * it reasons over, which both the UI `Issue` DTO and the backend's raw-issue
- * projection satisfy structurally. See docs/forge-gotchas.md
- * ("The rules have to leave the frontend").
+ * projection satisfy structurally. See docs/architecture.md
+ * ("shared domain rules").
  *
  * The two problem classes from the brief:
  *  - `unassigned`              → issue has no assignee (🔴)

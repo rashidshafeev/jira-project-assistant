@@ -10,7 +10,7 @@ import { AppConfigForm } from '@/features/app-config'
  * this page's own resolver (`src/admin.ts`), unreachable from the non-admin global
  * page / issue panel. It hosts the app-wide config form — the at-risk window and the
  * unassigned grace period that everyone's views and the notification sweep share.
- * See `app/lib/entry-context.ts` (how this view is routed) and docs/forge-gotchas.md.
+ * See `app/lib/entry-context.ts` (how this view is routed) and docs/forge/storage.md.
  */
 export function AdminPage() {
   const { t } = useTranslation()

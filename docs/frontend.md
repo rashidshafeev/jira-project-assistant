@@ -151,7 +151,7 @@ All layers are built out (not a skeleton). Where things live:
 
 MUI / DataGrid quirks specific to this frontend. (Forge **platform** constraints that surface
 in the UI — CSP-blocked inline styles, iframe layout/height, the `@forge/bridge` import — are
-in [`forge-gotchas.md`](./forge-gotchas.md).)
+in [`forge/custom-ui.md`](./forge/custom-ui.md).)
 
 ### MUI palette needs literal hex, not `var(--ds-*)`
 MUI augments semantic palette colors (it computes hover/active shades and contrast text from

@@ -111,7 +111,7 @@ define('setTablePrefs', (payload, context) => {
 // so every view can render the same window. WRITES live on the admin resolver
 // (`src/admin.ts`, behind `jira:adminPage`), which Jira shows only to admins; the
 // bridge routes `invoke` to the calling module's resolver, so there's no
-// `setAppConfig` reachable from the (non-admin) global page. See docs/forge-gotchas.md.
+// `setAppConfig` reachable from the (non-admin) global page. See docs/forge/storage.md.
 define('getAppConfig', () => getAppConfig())
 
 export const handler = resolver.getDefinitions()

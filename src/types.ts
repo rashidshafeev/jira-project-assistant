@@ -7,7 +7,7 @@
  *
  * Hand-written narrow slice — only the fields we consume. Codegen from the OpenAPI
  * spec is unhelpful here: `IssueBean.fields` is an untyped bag and every sub-schema
- * is optional, so it can't type the fields we read. See docs/forge-gotchas.md.
+ * is optional, so it can't type the fields we read. See docs/forge/jira-rest.md.
  *
  * ⚠️ TYPES ONLY. Both bundles import this with `import type`, so it erases at
  * runtime (no bundler/CSP impact). Keep constants/logic elsewhere.

@@ -67,7 +67,7 @@ both sides, so drift is a compile error. The **mock** (`mock/`) is dynamic-impor
 Deeper docs: [`architecture`](docs/architecture.md) ·
 [`frontend`](docs/frontend.md) · [`testing`](docs/testing.md) ·
 [`theming & i18n`](docs/theming-i18n.md) ·
-[`extending`](docs/extending.md) · [`forge gotchas`](docs/forge-gotchas.md).
+[`extending`](docs/extending.md) · [`forge gotchas`](docs/forge/).
 API/backend deep-dive in [`docs/api/`](docs/api):
 [`request flow` (component → Jira → back)](docs/api/request-flow.md) ·
 [`endpoints` (Jira calls + failure modes)](docs/api/endpoints.md) ·
@@ -137,7 +137,7 @@ npm run tunnel   # terminal 2 — forge tunnel routes the installed app to your 
 Open the **Project Assistant** page from a Jira project's left sidebar; edits need a page
 reload, not HMR. A few one-time gotchas (Chrome's Local Network Access prompt, redeploy once
 after any `manifest.yml` change, `--strictPort`) are in
-[`forge gotchas`](docs/forge-gotchas.md).
+[`forge gotchas`](docs/forge/).
 
 ---
 

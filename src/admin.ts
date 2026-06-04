@@ -11,7 +11,7 @@ import { toApiErrorPayload, type ResolverResult } from './result'
  *  - the bridge dispatches `invoke()` to the resolver of the CALLING module, so
  *    `setAppConfig` (defined here, not in `index.ts`) is unreachable from the
  *    non-admin global page / issue panel.
- * See docs/forge-gotchas.md ("Admin-only app-wide config WITHOUT /mypermissions").
+ * See docs/forge/storage.md ("Admin-only app-wide config WITHOUT /mypermissions").
  *
  * Mirrors `index.ts`'s thin envelope: validate payload, call the proxy, return a
  * typed result. No business logic — config is opaque persistence (`src/config.ts`).

@@ -24,7 +24,7 @@ function syncThemeFromDom(): void {
  *    Forge module context — see {@link EntryContext}.
  *
  * `@forge/bridge` is dynamically imported because it throws on import outside a
- * Forge host (see docs/forge-gotchas.md).
+ * Forge host (see docs/forge/custom-ui.md).
  */
 let bootstrapPromise: Promise<EntryContext> | null = null
 

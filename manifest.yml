@@ -22,7 +22,7 @@ modules:
   # trialed `jira:issuePanel` for this, but it's "click-to-add" by design and never
   # auto-shows — Atlassian FRGE-734; verified live, it didn't surface in the ••• / "+"
   # menus — so it couldn't meet "always visible on the issue" and was dropped. See
-  # docs/forge-gotchas.md.) Serves the SAME `main` bundle + `resolver` as the global
+  # docs/forge/surfaces.md.) Serves the SAME `main` bundle + `resolver` as the global
   # page: the host issue in `view.getContext()` routes the bootstrap to the single-issue
   # view (mode 'panel'), so there's no second build (see app/lib/entry-context.ts).
   jira:issueContext:
@@ -45,7 +45,7 @@ modules:
       # per-issue verdict would need either a `dynamicProperties` function or a resolver
       # that writes the issue-property lozenge, i.e. running `detectProblems` server-side.
       # That breaks the "no server-side business logic; frontend owns the rules" design,
-      # so it's deferred as a follow-up (see docs/forge-gotchas.md).
+      # so it's deferred as a follow-up (see docs/forge/surfaces.md).
   # Admin-only settings page — appears in Jira Settings → Apps, a surface Jira
   # shows ONLY to admins. This is the app's admin GATE: Forge apps can't call
   # /mypermissions, so there's no runtime admin check; instead the SURFACE
@@ -54,7 +54,7 @@ modules:
   # module's resolver, so setAppConfig is unreachable from the (non-admin) global
   # page / issue panel — those only get the read-only getAppConfig on the main
   # resolver. Same `main` bundle (mode 'admin' via app/lib/entry-context.ts). See
-  # docs/forge-gotchas.md ("Admin-only app-wide config WITHOUT /mypermissions").
+  # docs/forge/storage.md ("Admin-only app-wide config WITHOUT /mypermissions").
   jira:adminPage:
     - key: project-assistant-admin
       resource: main

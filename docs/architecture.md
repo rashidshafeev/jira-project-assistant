@@ -93,7 +93,7 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   lives on a SEPARATE resolver (`src/admin.ts`) wired only to the `jira:adminPage` module, which
   Jira renders to admins only. The bridge dispatches `invoke()` to the calling module's resolver,
   so the write is unreachable from the non-admin global page / issue panel. See
-  [`forge-gotchas.md`](./forge-gotchas.md) ("Admin-only app-wide config WITHOUT /mypermissions").
+  [`forge/storage.md`](./forge/storage.md) ("Admin-only app-wide config WITHOUT /mypermissions").
 
 **Net:** the backend is a pure proxy whose resolvers are the operation allowlist (plus the
 opaque app-storage for table prefs + the app-wide config); the only real logic (mapping, the

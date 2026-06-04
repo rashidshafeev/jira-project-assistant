@@ -13,7 +13,7 @@ const useMocks = import.meta.env.VITE_USE_MOCKS === 'true'
  *
  * This is *navigation*, not data, so it lives in `shared/lib` rather than the
  * `JiraApi` data contract. `@forge/bridge` is dynamic-imported because it throws on
- * import outside a Forge host (see docs/forge-gotchas.md).
+ * import outside a Forge host (see docs/forge/custom-ui.md).
  *
  * In the mock there's no real Jira to land on, so it's a no-op: the link is still
  * rendered (and tooltipped) as a preview affordance — it just doesn't navigate.

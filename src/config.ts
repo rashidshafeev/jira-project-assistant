@@ -3,7 +3,7 @@ import { storage } from '@forge/api'
 /**
  * App-wide configuration — ONE record per installation (not per-user). Read by
  * every view to drive the at-risk highlight; written ONLY from the admin page (see
- * `src/admin.ts` and the admin-gating note in docs/forge-gotchas.md).
+ * `src/admin.ts` and the admin-gating note in docs/forge/storage.md).
  *
  * Persisted as an opaque blob under a FIXED key (no `accountId`, unlike the
  * per-user `prefs.ts`) — that single difference is what makes it app-wide. Needs
