@@ -141,7 +141,7 @@ All layers are built out (not a skeleton). Where things live:
 - **`widgets`** — `issues-table`, `team-table`, `control-panel`.
 - **`features`** — `fix-issue` (assign / raise priority + optimistic mutations),
   `auto-assign` (the pure round-robin plan + confirm dialog), `table-prefs` (persisted grid
-  layout via Forge storage), `app-config` (the app-wide at-risk window: `useDeadlineWindow`
+  layout via Forge storage), `app-config` (the app-wide at-risk window + grace: `useDeadlineWindow`
   read by the views, the admin-only `AppConfigForm` for the write).
 - **`entities`** — `issue` (problem detection, stats), `member`, `project`.
 - **`shared`** — `api/` (contract + transport + mappers), `ui/` (`AppDataGrid`,

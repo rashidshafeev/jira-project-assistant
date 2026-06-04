@@ -222,22 +222,182 @@ as a follow-up: a manifest-literal `status` is static, and a per-issue verdict n
 running the problem rules server-side, which cuts against this app's "frontend owns the rules"
 design. `jira:issueGlance` (the click-to-add flyout) is **deprecated** — don't reach for it.
 
-## Admin-only app-wide config WITHOUT `/mypermissions` — surface + resolver partition
-The "approaching deadline" at-risk window is an **app-wide** setting only an **admin** should
-change. Two non-obvious facts forced the mechanism:
+## Notifications — event-driven issue-health alerts (triggers + `/notify`)
+
+The notification feature alerts when an issue **acquires** a problem (not a periodic digest):
+a low-priority issue **enters** its deadline window, or an issue has been **unassigned past a
+grace period**. Getting there meant answering "how does a Forge app message a human, and what
+can it even observe?" — the findings below (researched against current Atlassian docs, June
+2026) shaped a **two-engine** design.
+
+### There is NO native way to message a user that isn't anchored to an issue
+This was the load-bearing question ("can we send *as the app*, not about one issue?"). Answer:
+**not natively.**
+- **`/notify` is strictly per-issue.** `POST /rest/api/3/issue/{issueIdOrKey}/notify` is the
+  *only* ad-hoc mail API and its route **requires** an issue key — there is **no bulk or
+  issue-less variant**.
+- **The personal "bell" notification center has no public create API.** It's populated only by
+  Jira's own events (you're reporter/assignee/@mentioned). You can't push into it.
+- **Every issue-detached *native* option is in-product only** — a Forge realtime `publish` +
+  bridge `showFlag`, or a `globalPage` digest the app renders. These reach the user **only
+  while they have the app open** (a pull surface), never an absent teammate. (And a
+  scheduledTrigger/async backend can't even use realtime `publish()` — only `publishGlobal()`,
+  which isn't scope-enforced and could leak private-issue data. Rejected.)
+- **The only issue-detached *push* to an absent person is external egress** (email provider /
+  Slack / Teams) → needs `permissions.external.fetch.backend` and **forfeits the "Runs on
+  Atlassian" badge**. Not worth it here.
+- **Reframe:** anchoring a *problem alert* to its issue (with a deep link) is the **correct,
+  native behaviour, not a workaround**. What actually felt forced was the earlier **weekly
+  digest cadence** — fixed by switching to per-acquisition alerts, which is an issue-grained
+  signal anyway.
+
+So: keep `/notify` (per-issue, native, no egress) for the push; use `globalPage`/`issueContext`
+as the "as the app, see everything" in-product overview.
+Refs: <https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/> ;
+<https://developer.atlassian.com/platform/forge/runtime-egress-permissions/>
+
+### What `scheduledTrigger` vs `trigger` can each observe (and that both run as the *app*)
+Two server-side entry points, neither a bridge resolver — both plain exported async handlers
+wired to their own `function`, both running with **no user** → `api.asApp()` (the `asUser()`
+proxies in `src/endpoints/` can't be reused; `client.ts` grew an `asApp()` alongside).
+
+- **`scheduledTrigger` — time, not events.** `interval` is exactly `fiveMinute` | `hour` |
+  `day` | `week` — **no cron**, ≤ 5 triggers per app, first run ~5 min after deploy. Handler
+  gets `{ context }` (its `principal` is **not** a user). **Return ignored; errors don't
+  retry.** We run it **hourly**.
+- **`trigger` — Jira product events.** Manifest: `key`, `function`, `events: [...]`, optional
+  `filter` (`ignoreSelf` to drop the app's own writes, plus an `expression`). Handler gets
+  `(event, context)`; `event` carries the issue (+ a changelog on `updated`, + `associatedUsers`).
+  The Jira issue events are `avi:jira:{created,updated,deleted,assigned,viewed,mentioned,commented}:issue`.
+  **`avi:jira:assigned:issue` fires on assign AND unassign**, which is exactly the signal the
+  unassigned clock needs. Caveats: **delivery is delayed up to ~3 min and is NOT guaranteed
+  at-least-once**, and the **created-event changelog is reported flaky across instances** — so
+  treat the payload as a hint and **re-fetch** the issue (`asApp`) for anything you branch on.
+- **CRUCIAL: there is no event for "a due date is approaching."** Deadline proximity is pure
+  wall-clock — it fires *nothing*. That single fact forces a **scheduled sweep** for the
+  deadline-risk case; you cannot make it event-driven.
+Refs: <https://developer.atlassian.com/platform/forge/manifest-reference/modules/scheduled-trigger/> ;
+<https://developer.atlassian.com/platform/forge/manifest-reference/modules/trigger/> ;
+<https://developer.atlassian.com/platform/forge/events-reference/jira/>
+
+### The design: two engines, one state store (notify once on acquisition, never nag)
+- **Event engine** (`src/events.ts`, `trigger` on `assigned`/`created`/`deleted`): ONLY
+  maintains the unassigned "since" anchor in storage — *arm* it on unassign/create-unassigned,
+  *clear* it on re-assign, *wipe* all state on delete. **It never sends a notification.**
+- **Hourly sweep** (`src/sweep.ts`, `scheduledTrigger interval: hour`): does **all** the time
+  math, **all** the `/notify` sends, reconciles anchors the event missed (created-date
+  fallback), and clears the dedup flag when a problem resolves.
+- Because **every** notification goes through the one sweep, the "event and sweep both fire"
+  race is gone by construction. De-dup is a storage flag per `(issueId, problemKind)`; it's
+  cleared when the problem clears, so a genuine **re-acquisition re-alerts exactly once**. This
+  edge-trigger (level "still problematic" → edge "newly acquired") is precisely what the
+  old weekly digest lacked (it re-mailed every week).
+- **Why hourly:** entering the window is a date-boundary crossing, so `hour` delivers "within
+  ~1 h" without `fiveMinute`'s 288 empty runs/day; the 1-day unassigned grace tolerates an
+  hourly tick.
+
+### Detecting "unassigned for N days" — anchor + created-date fallback
+Knowing *how long* an issue has been unassigned needs a "since" timestamp:
+- **Authoritative:** the `avi:jira:assigned:issue` event arms `anchor = now` the moment the
+  assignee is cleared.
+- **Fallback / reconcile:** if the sweep meets an unassigned issue with **no anchor** (issue
+  predates install, or the event was missed — delivery isn't guaranteed), it seeds the anchor
+  from the issue's **`created`** timestamp. (`created` isn't in our narrow default field set —
+  the sweep requests it explicitly.) Avoid the changelog API as the primary mechanism: it's one
+  extra paginated request *per issue*; reserve it only if exact assigned-then-unassigned timing
+  ever matters.
+
+### The rules have to leave the frontend — they now live in a shared domain module
+This app's whole premise is "**frontend owns the problem rules; `src/` is a pure proxy**". A
+scheduled job breaks that by construction: it runs server-side and must classify issues
+*itself*, with no UI in the loop. Rather than duplicate the rules (two copies of the
+calendar-day math drift), the pure rules **graduate** out of `entities/issue` into a
+self-contained, framework-free module — `src/domain/problem.ts` — that is the single source of
+truth, imported by **both** sides:
+- the frontend re-exports it (`entities/issue` → `@domain/problem`), so the UI is unchanged;
+- the trigger imports it directly (`./domain/problem`).
+
+It sits alongside the other already-shared backend contracts — the wire types (`types.ts`) and
+the error envelope (`result.ts`), which the frontend already pulls in via the `@types`/`@result`
+aliases. **Caveat vs. those two:** `types.ts`/`result.ts` are *types only* (`import type` →
+erased at build, zero bundler/CSP impact). `problem.ts` ships **runtime code**, so it's bundled
+into *both* outputs — keep it dependency-free and valid under both tsconfigs (backend NodeNext +
+frontend `bundler`/`verbatimModuleSyntax`). The proxy resolvers stay thin; the rules live in the
+shared layer, **not** inside the resolvers — so "no business logic in the proxy" still holds.
+
+### `POST /rest/api/3/issue/{issueIdOrKey}/notify` — the delivery mechanism
+- **Native, no egress.** It sends through Jira's own mail server, so it needs **no `egress`
+  permission** and keeps the app "Runs on Atlassian." Recipients see a normal Jira issue email.
+- **Scopes:** classic **`write:jira-work`** (the broad write scope we *already* hold for
+  assign/setPriority) / granular `send:notification:jira`. So **no new scope**.
+- **Returns `204 No Content`** when the mail is queued (not a body). Treat non-204 as failure.
+- **Strictly per-issue** (the route needs an issue key) — which is fine here, because a
+  per-acquisition alert *is* about one issue. We send to `to: { reporter: true, assignee: true }`
+  (`assignee` is a no-op on an unassigned issue, so the reporter still gets it).
+- **Body shape:**
+```jsonc
+{
+  "subject": "…",
+  "textBody": "…",                 // plain text
+  "htmlBody": "…",                 // optional rich
+  "to": {                          // NotificationRecipients
+    "reporter": true, "assignee": true, "watchers": false, "voters": false,
+    "users":  [{ "accountId": "…" }],
+    "groups": [{ "name": "…" }]
+  },
+  "restrict": { /* optional permission/group gating */ }
+}
+```
+
+### Admin-only app-wide config WITHOUT `/mypermissions` — surface + resolver partition
+The "approaching deadline" window and the unassigned grace are an **app-wide** setting only an
+**admin** should change. Two non-obvious facts forced the mechanism:
 - **Forge/OAuth apps cannot call `/rest/api/3/mypermissions`** — so there is **no runtime
   "is this caller an admin?" check** available to a resolver.
 - **The fix is the module surface + a dedicated resolver.** Put the config UI on a
-  **`jira:adminPage`** (Jira renders it *only* inside admin settings -> admin-only), and give
+  **`jira:adminPage`** (Jira renders it *only* inside admin settings → admin-only), and give
   that module its **own `function` resolver** (`src/admin.ts`). The bridge dispatches `invoke()`
   to **the calling module's resolver**, so `setAppConfig` — defined *only* in the admin resolver
   — is **unreachable from the non-admin global page / issue panel**. That partition IS the gate;
   the global page gets a read-only `getAppConfig`.
 - **App-wide vs per-user storage is just the key shape.** `storage:app` is app-wide by default
   (one record per installation). Per-user blobs (`prefs.ts`, the old per-user settings) put the
-  `accountId` *in* the key; the app-wide config uses a **fixed key with no accountId**. Same scope.
+  `accountId` *in* the key; the app-wide config uses a **fixed key with no accountId**. Same
+  scope. The asApp sweep (no user) reads that fixed key.
 Refs: <https://developer.atlassian.com/platform/forge/manifest-reference/modules/jira-admin-page/> ;
 <https://developer.atlassian.com/cloud/jira/platform/scopes-for-oauth-2-3LO-and-forge-apps/>
+
+### Storage choice — legacy `@forge/api storage` is enough here
+- **Legacy `storage`** (what `prefs.ts` uses) supports prefix listing
+  (`storage.query().where(startsWith(…)).getMany()`) but is **frozen** (no TTL).
+- **`@forge/kvs`** adds `ttl` (max 1 yr; expiry is async, can lag ≤ 48 h — a cleanup
+  convenience, not a precise gate) and `keyPolicy: 'FAIL_IF_EXISTS'` (an atomic "claim once").
+- **We stay on legacy:** a single hourly sweep means no concurrent write race (so no atomic
+  claim needed), and we **delete keys explicitly** when a problem clears or an issue is deleted
+  (so no TTL needed). Orphaned keys only accrue from issues deleted while the app was down — an
+  acceptable, documented trade; adopting `@forge/kvs` for a TTL backstop is the follow-up.
+  (Jira **issue properties** are an alternative co-located store; `jira:entityProperty` makes
+  them JQL-searchable — overkill for opaque dedup flags.)
+
+### Native Jira Automation could do most of this — why the app still earns its place
+Honest check: Automation has a Scheduled trigger + JQL + Send-email action (and real **cron**,
+which Forge lacks), so `priority in (Low,Lowest) AND duedate <= Nd` and `assignee is EMPTY AND
+created <= -1d` are expressible natively. The Forge app is justified, narrowly, by: **one
+cross-project install** (vs per-project rule sprawl / a global rule that burns the execution
+quota); the **same `detectProblems` rule** powering the UI verdict *and* the alert (Automation's
+logic lives in JQL text that drifts); and **real stateful dedup/grace** via `storage:app`
+(Automation only fakes these with guard labels and a created-time proxy). Don't oversell beyond
+that — both still anchor the email to an issue.
+
+### You can't dry-run it without sending real mail — manual-verify + deploy-gated
+There's **no first-class "run this scheduled trigger now"** in the CLI; events arrive within
+~3 min but aren't guaranteed; and the whole path runs as the app with no user. It's also
+outside the E2E net — the Playwright suite runs against the **mock**, which replaces `src/`
+entirely, so neither engine nor `/notify` is covered (the *rules* they call stay covered through
+the frontend). Net: the engines are **manual-verify, like the rest of `src/`** — and crucially,
+**`forge deploy` activates real hourly mail** to real recipients on the live site. Before
+trusting event-payload fields, **`console.log` a live event** (payload shapes vary across
+instances). Gate the deploy on intent; don't fire `/notify` at real people just to "test it."
 
 ## Tunnel
 

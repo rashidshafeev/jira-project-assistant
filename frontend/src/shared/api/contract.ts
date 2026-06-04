@@ -50,15 +50,19 @@ export type TablePrefs = Record<string, unknown>
 /**
  * App-wide configuration — ONE record for the whole installation (not per-user),
  * mirrored from the backend (`src/config.ts`). Read by every view to drive the
- * at-risk highlighting + stats; WRITTEN only from the admin page, whose resolver
- * owns `setAppConfig` (`src/admin.ts`) — Jira renders that surface to admins only.
- * The default lives in `shared/config/app-config.ts` (so it's importable without
- * this types-only file gaining a runtime value).
+ * at-risk highlighting + stats, and by the notification sweep server-side; WRITTEN
+ * only from the admin page, whose resolver owns `setAppConfig` (`src/admin.ts`) —
+ * Jira renders that surface to admins only. The default lives in
+ * `shared/config/app-config.ts` (so it's importable without this types-only file
+ * gaining a runtime value).
  */
 export interface AppConfig {
   /** "Approaching deadline" window in days: a low-priority issue due within it
    *  (or overdue) is flagged at risk. Shared by the table, stats and Fix dialog. */
   deadlineWarningDays: number
+  /** Days an issue may sit unassigned before the notification sweep alerts on it
+   *  (notification-timing only — the table flags "unassigned" immediately). */
+  unassignedGraceDays: number
 }
 
 /** Everything the UI can ask the backend to do — expressed in clean DTOs. */

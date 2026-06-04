@@ -55,14 +55,15 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   normalized error taxonomy. Both are types-only, shared by the backend and (via the
   `@types` / `@result` aliases) the frontend, so drift is a compile error.
 - **`src/domain/problem.ts` — shared domain rules (the one shared *runtime* module).** The
-  pure problem-detection rules (`detectProblems` et al.) live in a framework-free module under
-  `src/domain/` rather than inside the frontend, so any **server-side** job that must classify
-  issues (it runs with no UI in the loop) can import the *same* rules instead of duplicating the
-  calendar-day math and drifting. The frontend re-exports it via the `@domain/problem` alias, so
-  UI callers still import from `@/entities/issue`. Unlike the types-only `types.ts`/`result.ts`,
-  it ships **runtime** code, so it's bundled into whatever output uses it — kept dependency-free
-  for exactly that reason. The *proxy resolvers* still hold no logic; the rules live in this
-  shared layer, not in them.
+  pure problem-detection rules (`detectProblems` et al.) originally lived in the frontend
+  (`entities/issue`), since only the UI needed them. The notification engines (below)
+  run server-side and must classify issues too — so rather than duplicate the calendar-day
+  math, the rules **graduated** into a framework-free module under `src/domain/`: a single
+  source of truth imported by **both** the trigger (`./domain/problem`) and the frontend
+  (which re-exports it via the `@domain/problem` alias, so callers still import from
+  `@/entities/issue`). Unlike `types.ts`/`result.ts` it ships **runtime** code, so it's
+  bundled into both outputs — kept dependency-free for exactly that reason. The *proxy
+  resolvers* still hold no logic; the rules live in this shared layer, not in them.
 - **Mapping lives on the frontend, not the server.** A mapper (raw Jira → UI DTO) is a
   pure function. The Forge FaaS sandbox is a hostile place for logic — slow deploys, you
   must mock `@forge/api` to test it, no fast iteration — so the mapping lives where the
@@ -80,12 +81,14 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   `applyAssignments(pairs)` write-batching endpoint can be added **without moving the
   logic** — the pure planner stays put.
 
-- **App storage holds two kinds of state, neither of it Jira data.** Both behind the one
-  `storage:app` scope, both opaque/structured persistence the server never reasons over:
+- **App storage holds three kinds of state, none of it Jira data.** All behind the one
+  `storage:app` scope, all opaque/structured persistence the server never reasons over:
   (1) **per-user table prefs** — `src/prefs.ts` (`getTablePrefs`/`setTablePrefs`) persists each
   user's table layout as an opaque blob **keyed on `accountId`**; (2) **app-wide config** —
-  `src/config.ts` keeps ONE record (a *fixed* key, no `accountId`) for the at-risk window, read
-  by every view. This is the lone exception to "the backend only proxies Jira", and it keeps the
+  `src/config.ts` keeps ONE record (a *fixed* key, no `accountId`) for the at-risk window +
+  unassigned grace, read by every view and by the sweep; (3) **notification state** —
+  `src/notify/state.ts` keeps the per-issue dedup flags + the "unassigned since" anchor the
+  engines use. This is the lone exception to "the backend only proxies Jira", and it keeps the
   same discipline: the server stores, it doesn't interpret.
 - **Admin config is gated by surface + resolver partition, not a runtime check** (Forge apps
   can't call `/mypermissions`). The config *read* (`getAppConfig`) lives on the main resolver
@@ -94,12 +97,29 @@ the *only* reason `src/` exists. That single fact drives the whole shape:
   Jira renders to admins only. The bridge dispatches `invoke()` to the calling module's resolver,
   so the write is unreachable from the non-admin global page / issue panel. See
   [`forge-gotchas.md`](./forge-gotchas.md) ("Admin-only app-wide config WITHOUT /mypermissions").
+- **Notifications are TWO engines sharing one state store, not a resolver.** Both run with **no
+  user context**, so they call Jira with `asApp()` (`src/notify/jira.ts`, not the `asUser()`
+  endpoints), and both classify with the shared `src/domain/problem.ts` rules so an emailed
+  verdict always matches the UI's. (1) An **hourly `scheduledTrigger`** (`src/sweep.ts`; Forge
+  intervals are coarse — `fiveMinute` | `hour` | `day` | `week`, no cron) owns ALL the time math
+  and ALL the sends: it sweeps each project, and for every NEWLY-acquired problem emails the
+  assignee + reporter once via Jira's `/notify` (native mail, no `egress`; the held
+  `write:jira-work` scope covers it), de-duping on the stored `notified:*` flag and re-arming when
+  the problem clears. (2) A **product-event `trigger`** (`src/events.ts`, on assigned/created/
+  deleted issue) only maintains the "unassigned since" anchor in real time — it NEVER emails, so
+  the two engines can't double-notify. The sweep is the safety net: it reconciles a missed event
+  from the issue's `created` date. This (plus auto-assign's per-issue loop) is the one place
+  domain rules run server-side. Non-redundant with native Jira, which emits only *event*
+  notifications, never "this is *still* unassigned / *now* within its deadline window". Platform
+  details (interval/event semantics, `asApp`, the `/notify` body, deploy-activates-real-email) are
+  in [`forge-gotchas.md`](./forge-gotchas.md) ("Notifications").
 
 **Net:** the backend is a pure proxy whose resolvers are the operation allowlist (plus the
-opaque app-storage for table prefs + the app-wide config); the only real logic (mapping, the
-auto-assign plan, the problem rules) is **pure** — mapping and the plan live on the frontend,
-the rules in the shared `src/domain` layer — so all of it is trivially testable and exercised
-end-to-end by the Playwright mock lane (see [`testing.md`](./testing.md)).
+opaque app-storage for prefs/config/notification-state, and the two `asApp` notification engines
+that reuse the shared rules); the only real logic (mapping, the auto-assign plan, the problem
+rules) is **pure** — mapping and the plan live on the frontend, the rules in the shared
+`src/domain` layer — so all of it is trivially testable and exercised end-to-end by the
+Playwright mock lane (see [`testing.md`](./testing.md)).
 
 For the step-by-step path of a single call through every layer — frontend component →
 bridge → resolver → `requestJira` → Jira and back, and why `src/index.ts` is about as

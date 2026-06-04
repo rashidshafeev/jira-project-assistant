@@ -3,12 +3,12 @@
  * control-panel stats, the issue-context verdict, the Fix dialog).
  *
  * These are NOT defined here — the canonical source is the framework-free
- * `src/domain/problem.ts` (`@domain/problem`), a single module so that any
- * server-side job that must classify issues can import the *same* rules instead
- * of duplicating them, and the rows, the panel, and the verdict can never
- * disagree. This file just re-exports it under the FSD `entities/issue` slice so
- * callers keep importing from `@/entities/issue`. See docs/architecture.md
- * ("shared domain rules").
+ * `src/domain/problem.ts` (`@domain/problem`), a single module imported by BOTH
+ * this frontend AND the backend notification sweep (`src/sweep.ts`), so the rows,
+ * the panel, and the notification email can never disagree. This file just
+ * re-exports it under the FSD `entities/issue` slice so callers keep importing from
+ * `@/entities/issue`. See docs/forge-gotchas.md ("The rules have to leave the
+ * frontend").
  *
  * The frontend `Issue` DTO satisfies the rules' `ProblemInput` shape structurally
  * (`assignee`/`priority`/`dueDate`), so `detectProblems(issue, …)` still typechecks

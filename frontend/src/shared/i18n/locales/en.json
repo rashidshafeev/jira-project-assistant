@@ -44,6 +44,13 @@
     "subtitle": "These settings apply to everyone on this site and can only be changed by Jira admins.",
     "deadline": {
       "help": "Low-priority issues due within this many days (or overdue) are flagged as at risk — in the table, the stats, and the issue panel."
+    },
+    "grace": {
+      "label": "Unassigned grace period",
+      "help": "How long an issue may stay unassigned before an alert email is sent. It's still flagged as unassigned in the table right away.",
+      "immediate": "Alert immediately",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
     }
   },
   "panel": {

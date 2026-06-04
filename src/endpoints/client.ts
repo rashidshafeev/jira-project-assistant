@@ -15,6 +15,17 @@ export { route }
 /** Authenticated Jira request context for the current user. */
 export const asUser = () => api.asUser()
 
+/**
+ * Authenticated Jira request context as the APP itself (no user). The notification
+ * engines — the hourly issue-health `scheduledTrigger` (`src/sweep.ts`) and the
+ * `assignee-watch` product-event `trigger` (`src/events.ts`) — run with **no
+ * calling user**, so they can't use `asUser()`; they act as the app, with the
+ * manifest scopes (see docs/forge-gotchas.md, "scheduledTrigger … runs as the
+ * app"). The response shape is identical to `asUser()`'s, so `jiraJson`/`assertOk`
+ * below work for both. See `src/notify/jira.ts` for the `asApp` proxies.
+ */
+export const asApp = () => api.asApp()
+
 export type JiraResponse = Awaited<
   ReturnType<ReturnType<typeof api.asUser>['requestJira']>
 >

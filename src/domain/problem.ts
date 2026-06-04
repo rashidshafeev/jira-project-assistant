@@ -1,9 +1,11 @@
 /**
- * Pure, framework-free issue-health rules — the SINGLE source of truth for problem
- * detection. The frontend re-exports it (`entities/issue/model/problem.ts` →
- * `@domain/problem`), so the table, the issue-context panel, and the Fix dialog all
- * classify identically. It's kept framework-free (no React/Forge imports) so any
- * server-side job that needs the same verdict can import it directly without drift.
+ * Pure, framework-free issue-health rules — the SINGLE source of truth shared by
+ * BOTH bundles:
+ *  - the frontend re-exports it (`entities/issue/model/problem.ts` →
+ *    `@domain/problem`), so the table, the issue-context panel, and the Fix dialog
+ *    all classify identically;
+ *  - the backend notification engines (`src/sweep.ts` + `src/events.ts`) import it,
+ *    so the email's "why" is computed by the exact same code the UI shows.
  *
  * Lives beside the other shared backend contracts (`types.ts` wire shapes,
  * `result.ts` error envelope) that the frontend already pulls in via the

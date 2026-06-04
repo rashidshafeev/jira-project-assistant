@@ -14,6 +14,9 @@ import { DEFAULT_APP_CONFIG } from '@/shared/config/app-config'
 /** Presets offered for the at-risk window (days). The default (7) sits in the middle. */
 export const DEADLINE_WINDOW_OPTIONS = [3, 7, 14, 30] as const
 
+/** Presets offered for the unassigned grace period (days). 0 = alert on the next sweep. */
+export const GRACE_DAYS_OPTIONS = [0, 1, 3, 7] as const
+
 const APP_CONFIG_KEY = ['appConfig'] as const
 
 /** The full app-wide config query. One entry shared by every reader (TanStack

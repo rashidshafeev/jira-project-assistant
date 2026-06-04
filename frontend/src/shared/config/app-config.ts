@@ -9,4 +9,5 @@ import type { AppConfig } from '@/shared/api/contract'
  */
 export const DEFAULT_APP_CONFIG: AppConfig = {
   deadlineWarningDays: 7,
+  unassignedGraceDays: 1,
 }

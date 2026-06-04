@@ -63,12 +63,41 @@ modules:
       title: Project Assistant
       layout: blank
       icon: resource:main;panel-icon.svg
+  # ── ISSUE-HEALTH NOTIFICATIONS — two engines, both running as the app ─────────
+  # NOTE: with these modules registered, `forge deploy` ACTIVATES real mail (the
+  # sweep sends Jira /notify to assignee+reporter of every newly-flagged issue).
+  # ENGINE 1 — hourly time sweep. Lists each project's issues, classifies them with
+  # the shared @domain/problem rules, and emails on each *newly* acquired problem
+  # (dedup flag per issue+kind, cleared when the problem resolves → re-alert once on
+  # re-acquisition). Owns ALL the time math and ALL the sends. `interval` is exactly
+  # fiveMinute|hour|day|week (no cron); first run ~5 min after deploy.
+  scheduledTrigger:
+    - key: notify-sweep
+      function: sweep
+      interval: hour
+  # ENGINE 2 — product-event trigger. Maintains ONLY the "unassigned since" anchor
+  # in storage (arm on unassign/create-unassigned, clear on re-assign, wipe on
+  # delete); it never sends. `avi:jira:assigned:issue` fires on assign AND unassign.
+  # Delivery is delayed/not-guaranteed, so the sweep reconciles missed anchors from
+  # the issue's created date — the event is an optimization, not the source of truth.
+  trigger:
+    - key: notify-events
+      function: events
+      events:
+        - avi:jira:assigned:issue
+        - avi:jira:created:issue
+        - avi:jira:deleted:issue
   function:
     - key: resolver
       handler: index.handler
     # Resolver for the admin page ONLY (the config-write gate; see src/admin.ts).
     - key: admin-resolver
       handler: admin.handler
+    # Engine handlers — plain async handlers (not bridge resolvers), run as the app.
+    - key: sweep
+      handler: sweep.handler
+    - key: events
+      handler: events.handler
 
 resources:
   - key: main
@@ -90,8 +119,9 @@ permissions:
     - write:jira-work
     # list project members / assignable users
     - read:jira-user
-    # Forge app storage: per-user UI table prefs (keyed by accountId, src/prefs.ts)
-    # and the app-wide config blob (fixed key, src/config.ts).
+    # Forge app storage: per-user UI table prefs (keyed by accountId, src/prefs.ts),
+    # the app-wide config blob (fixed key, src/config.ts), and the notification
+    # dedup/anchor state for the two engines (src/notify/state.ts).
     - storage:app
   content:
     # MUI/Emotion inject CSS as inline <style> tags at runtime; the default

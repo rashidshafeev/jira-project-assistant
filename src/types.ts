@@ -68,6 +68,9 @@ export interface JiraIssueFields {
   assignee: JiraUser | null
   priority?: JiraPriority | null
   duedate?: string | null
+  /** ISO datetime. Only the notification sweep requests it (the fallback
+   *  "unassigned since" anchor); the UI's narrow field set omits it. */
+  created?: string | null
 }
 
 export interface JiraIssue {
