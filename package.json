@@ -19,7 +19,8 @@
     "e2e": "npm test",
     "e2e:ui": "JIRA_APP_URL= playwright test --ui",
     "e2e:report": "playwright show-report",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:users": "set -a; . ./.env 2>/dev/null || { echo 'Missing .env — seeding needs FORGE_EMAIL/FORGE_API_TOKEN + JIRA_SITE.'; exit 1; }; set +a; node e2e/testing/jira/seed-users.mjs"
   },
   "keywords": [
     "atlassian",

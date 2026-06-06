@@ -148,6 +148,8 @@ equivalent.
 `e2e/jira-smoke.spec.ts` (tagged `@jira`, **read-only**) is a minimal, runnable PoC of the
 genuinely novel piece: driving the real app inside the cross-origin Forge iframe against live
 data. It skips seeding — it asserts only that the app's grid renders, and never writes Jira data.
+(Creating real fixture data + a fixture team to test against, and why users are the hard part,
+is covered separately in [`seeding.md`](./seeding.md).)
 
 **Authenticate the lane.** The embedded iframe needs a real Atlassian *web session* — an API
 token only does REST Basic auth, not the browser session the app runs in. The `jira-setup`

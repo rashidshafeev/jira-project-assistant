@@ -10,6 +10,8 @@ curl -s -u "$FORGE_EMAIL:$FORGE_API_TOKEN" -H "Accept: application/json" \
   "https://rashidshafeev.atlassian.net/rest/api/3/search/jql?jql=project=SAM1&fields=summary,status,assignee,priority,duedate"
 ```
 Reads are safe; POST/PUT create/modify **real** data on the live site — confirm scope first.
+For *creating* real fixture data (a seed project, issues with relative due dates, and the
+fixture team) and cleaning it up safely, see [`../seeding.md`](../seeding.md).
 
 ## Real-data quirks the mock didn't surface
 Found by inspecting the live `rashidshafeev.atlassian.net` projects (KAN, SAM1):
