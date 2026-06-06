@@ -30,6 +30,7 @@ const ATLASSIAN_FONT_FAMILY = [
  */
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const mode = useThemeStore((s) => s.mode)
+  const resolved = useThemeStore((s) => s.resolved)
 
   const theme = useMemo(() => {
     const t = ATLASSIAN_TOKENS[mode]
@@ -40,7 +41,11 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
         error: { main: t.danger },
         warning: { main: t.warning },
         success: { main: t.success },
-        background: { default: t.surface, paper: t.raised },
+        // Until we know the real host theme, keep the page background transparent
+        // so the (correctly-themed) Jira surface shows through instead of flashing
+        // a guessed, often-inverted color. `setMode` flips `resolved` and the real
+        // surface lands. See theme.store.ts.
+        background: { default: resolved ? t.surface : 'transparent', paper: t.raised },
         text: { primary: t.text, secondary: t.subtle },
         divider: t.border,
       },
@@ -53,7 +58,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
         MuiTab: { styleOverrides: { root: { textTransform: 'none' } } },
       },
     })
-  }, [mode])
+  }, [mode, resolved])
 
   return (
     <ThemeProvider theme={theme}>

@@ -7,9 +7,10 @@ import type { EntryContext } from '@/app/lib/entry-context'
 /**
  * Holds the first paint until the Forge bootstrap resolves (host theme + user
  * locale + which view to render), so the app never flashes the default
- * light/English UI before flipping to the real values. The theme mode is already
- * seeded synchronously (see `theme.store`), so the fallback spinner renders on the
- * correct background — the only visible state is a brief, correctly-themed spinner.
+ * light/English UI before flipping to the real values. Until the host theme is
+ * known the page background is transparent (see `theme.store` / `with-theme`), so
+ * the only visible loading state is a spinner over the Jira-themed surface — no
+ * guessed, often-inverted color flash.
  *
  * `children` is a render-prop given the resolved {@link EntryContext}, so the
  * caller branches between the full page and the single-issue panel.
